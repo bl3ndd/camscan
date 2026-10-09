@@ -36,7 +36,28 @@ nonisolated enum ImageFilterService {
         guard let output = context.createCGImage(image, from: image.extent.integral) else {
             return source
         }
-        return UIImage(cgImage: output)
+        return withOverlays(UIImage(cgImage: output), edit.overlays)
+    }
+
+    /// Draws signatures and drawings on top of the finished page.
+    static func withOverlays(_ page: UIImage, _ overlays: [PageOverlay]) -> UIImage {
+        guard !overlays.isEmpty else { return page }
+        let size = page.size
+        let format = UIGraphicsImageRendererFormat()
+        format.scale = page.scale
+        format.opaque = true
+        return UIGraphicsImageRenderer(size: size, format: format).image { _ in
+            page.draw(at: .zero)
+            for overlay in overlays {
+                guard let image = UIImage(data: overlay.imageData) else { continue }
+                image.draw(in: CGRect(
+                    x: overlay.rect.minX * size.width,
+                    y: overlay.rect.minY * size.height,
+                    width: overlay.rect.width * size.width,
+                    height: overlay.rect.height * size.height
+                ))
+            }
+        }
     }
 
     // MARK: - Private

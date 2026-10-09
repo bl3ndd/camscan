@@ -102,3 +102,56 @@ struct SearchablePDFTests {
         #expect(text.contains("Счёт за сентябрь"))
     }
 }
+
+struct OverlayTests {
+
+    @Test func editsSavedBeforeOverlaysStillLoad() throws {
+        let legacy = #"{"quad":{"topLeft":[0.1,0.1],"topRight":[0.9,0.1],"bottomRight":[0.9,0.9],"bottomLeft":[0.1,0.9]},"filter":"Auto","brightness":0,"contrast":1,"rotation":0}"#
+        let edit = try JSONDecoder().decode(PageEdit.self, from: Data(legacy.utf8))
+        #expect(edit.filter == .auto)
+        #expect(!edit.quad.isFull)
+        #expect(edit.overlays.isEmpty)
+    }
+
+    @Test func overlayIsDrawnOnPage() throws {
+        let size = CGSize(width: 100, height: 100)
+        let format = UIGraphicsImageRendererFormat()
+        format.scale = 1
+        let page = UIGraphicsImageRenderer(size: size, format: format).image { context in
+            UIColor.white.setFill()
+            context.fill(CGRect(origin: .zero, size: size))
+        }
+        let ink = UIGraphicsImageRenderer(size: CGSize(width: 10, height: 10), format: format).image { context in
+            UIColor.black.setFill()
+            context.fill(CGRect(x: 0, y: 0, width: 10, height: 10))
+        }
+        let overlay = PageOverlay(kind: .signature, imageData: try #require(ink.pngData()), rect: CGRect(x: 0.5, y: 0.5, width: 0.5, height: 0.5))
+
+        let result = ImageFilterService.withOverlays(page, [overlay])
+        #expect(brightness(of: result, at: CGPoint(x: 75, y: 75)) < 0.1)
+        #expect(brightness(of: result, at: CGPoint(x: 25, y: 25)) > 0.9)
+    }
+
+    @Test func drawingIsReplacedNotDuplicated() {
+        var edit = PageEdit()
+        edit.setDrawing(PageOverlay(kind: .drawing, imageData: Data([1]), rect: .zero))
+        edit.setDrawing(PageOverlay(kind: .drawing, imageData: Data([2]), rect: .zero))
+        #expect(edit.overlays.count == 1)
+        #expect(edit.drawing?.imageData == Data([2]))
+        edit.setDrawing(nil)
+        #expect(edit.overlays.isEmpty)
+    }
+
+    private func brightness(of image: UIImage, at point: CGPoint) -> CGFloat {
+        guard let cgImage = image.cgImage,
+              let cropped = cgImage.cropping(to: CGRect(origin: point, size: CGSize(width: 1, height: 1))) else { return -1 }
+        var pixel = [UInt8](repeating: 0, count: 4)
+        let context = CGContext(
+            data: &pixel, width: 1, height: 1, bitsPerComponent: 8, bytesPerRow: 4,
+            space: CGColorSpaceCreateDeviceRGB(),
+            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+        )
+        context?.draw(cropped, in: CGRect(x: 0, y: 0, width: 1, height: 1))
+        return CGFloat(pixel[0]) / 255
+    }
+}

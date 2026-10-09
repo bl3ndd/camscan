@@ -4,12 +4,14 @@ import Combine
 @MainActor
 final class StoreService: ObservableObject {
     static let proProductID = "com.camscan.pro"
+    /// Cached so Pro features work offline at launch; `checkEntitlement` keeps it honest.
+    private static let cachedProKey = "is_pro_user"
 
     @Published var proProduct: Product?
     @Published var isPurchased = false
 
     init() {
-        isPurchased = ScanLimitService.isPro
+        isPurchased = UserDefaults.standard.bool(forKey: Self.cachedProKey)
 
         Task {
             await loadProduct()
@@ -37,8 +39,7 @@ final class StoreService: ObservableObject {
             case .success(let verification):
                 let transaction = try checkVerified(verification)
                 await transaction.finish()
-                ScanLimitService.unlockPro()
-                isPurchased = true
+                setPurchased(true)
                 return true
             case .userCancelled, .pending:
                 return false
@@ -61,12 +62,19 @@ final class StoreService: ObservableObject {
     private func checkEntitlement() async {
         for await result in Transaction.currentEntitlements {
             if case .verified(let transaction) = result,
-               transaction.productID == Self.proProductID {
-                ScanLimitService.unlockPro()
-                isPurchased = true
+               transaction.productID == Self.proProductID,
+               transaction.revocationDate == nil {
+                setPurchased(true)
                 return
             }
         }
+        // No entitlement: refunded, or a Family Sharing member left the family.
+        setPurchased(false)
+    }
+
+    private func setPurchased(_ value: Bool) {
+        isPurchased = value
+        UserDefaults.standard.set(value, forKey: Self.cachedProKey)
     }
 
     private func listenForTransactions() {
@@ -75,10 +83,7 @@ final class StoreService: ObservableObject {
                 if case .verified(let transaction) = result {
                     await transaction.finish()
                     if transaction.productID == Self.proProductID {
-                        await MainActor.run {
-                            ScanLimitService.unlockPro()
-                            self.isPurchased = true
-                        }
+                        await self.checkEntitlement()
                     }
                 }
             }

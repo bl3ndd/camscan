@@ -43,11 +43,7 @@ struct PagesView: View {
                 }
                 ToolbarItem(placement: .bottomBar) {
                     Button {
-                        if ScanLimitService.canScan() {
-                            showScanner = true
-                        } else {
-                            showPaywall = true
-                        }
+                        showScanner = true
                     } label: {
                         Label("Add Pages", systemImage: "plus.viewfinder")
                     }
@@ -57,7 +53,6 @@ struct PagesView: View {
                 DocumentScannerView(
                     onScan: { images in
                         appendPages(images)
-                        ScanLimitService.recordScan()
                         showScanner = false
                     },
                     onCancel: {

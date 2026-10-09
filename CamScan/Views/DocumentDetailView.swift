@@ -16,6 +16,10 @@ struct DocumentDetailView: View {
     @State private var showPages = false
     @State private var showPaywall = false
     @AppStorage("pdfPageSize") private var pageSize: PDFPageSize = .localeDefault
+    @State private var showSignatureEditor = false
+    @State private var newSignature: UIImage?
+    @State private var signatureRequest: SignatureRequest?
+    @State private var annotationRequest: AnnotationRequest?
 
     private var sortedPages: [ScannedPage] {
         document.pages.sorted { $0.index < $1.index }
@@ -91,6 +95,20 @@ struct DocumentDetailView: View {
                     Divider()
 
                     Button {
+                        startSigning()
+                    } label: {
+                        Label("Sign", systemImage: "signature")
+                    }
+
+                    Button {
+                        startDrawing()
+                    } label: {
+                        Label("Draw & Highlight", systemImage: "pencil.tip.crop.circle")
+                    }
+
+                    Divider()
+
+                    Button {
                         recognizeCurrentPage()
                     } label: {
                         Label("OCR — Current Page", systemImage: "text.viewfinder")
@@ -161,6 +179,25 @@ struct DocumentDetailView: View {
         .sheet(isPresented: $showPages) {
             PagesView(document: document, store: store)
         }
+        .sheet(isPresented: $showSignatureEditor, onDismiss: {
+            // Place the signature right after it's first drawn.
+            if let signature = newSignature {
+                newSignature = nil
+                presentSignaturePlacement(signature)
+            }
+        }) {
+            SignatureEditorView { newSignature = $0 }
+        }
+        .fullScreenCover(item: $signatureRequest) { request in
+            SignaturePlacementView(page: request.page, signature: request.signature) { rect in
+                addSignature(request.signature, at: rect, to: request.pageID)
+            }
+        }
+        .fullScreenCover(item: $annotationRequest) { request in
+            AnnotateView(page: request.background, existing: request.existing) { overlay in
+                setDrawing(overlay, on: request.pageID)
+            }
+        }
         .onChange(of: document.pages.count) {
             selectedPageIndex = min(selectedPageIndex, max(0, document.pages.count - 1))
         }
@@ -170,13 +207,75 @@ struct DocumentDetailView: View {
         }
     }
 
-    private func recognizeCurrentPage() {
-        guard let page = sortedPages[safe: selectedPageIndex] else { return }
+    // MARK: - Signature & drawing (Pro)
 
-        if !store.isPurchased {
+    private func startSigning() {
+        guard store.isPurchased else {
             showPaywall = true
             return
         }
+        if let drawing = SignatureStore.load(), let signature = SignatureStore.image(from: drawing) {
+            presentSignaturePlacement(signature)
+        } else {
+            showSignatureEditor = true
+        }
+    }
+
+    private func presentSignaturePlacement(_ signature: UIImage) {
+        guard let page = sortedPages[safe: selectedPageIndex], let image = page.image else { return }
+        signatureRequest = SignatureRequest(pageID: page.id, page: image, signature: signature)
+    }
+
+    private func addSignature(_ signature: UIImage, at rect: CGRect, to pageID: UUID) {
+        guard let page = document.pages.first(where: { $0.id == pageID }),
+              let data = signature.pngData() else { return }
+        var edit = page.edit
+        edit.overlays.append(PageOverlay(kind: .signature, imageData: data, rect: rect))
+        rerender(page, with: edit)
+    }
+
+    /// Shows the page without its drawing, so the existing strokes can be edited in place.
+    private func startDrawing() {
+        guard store.isPurchased else {
+            showPaywall = true
+            return
+        }
+        guard let page = sortedPages[safe: selectedPageIndex], let source = page.sourceImage else { return }
+        var edit = page.edit
+        let existing = edit.drawing
+        edit.setDrawing(nil)
+        let pageID = page.id
+
+        Task {
+            let background = await Task.detached(priority: .userInitiated) {
+                ImageFilterService.render(source, edit: edit)
+            }.value
+            annotationRequest = AnnotationRequest(pageID: pageID, background: background, existing: existing)
+        }
+    }
+
+    private func setDrawing(_ overlay: PageOverlay?, on pageID: UUID) {
+        guard let page = document.pages.first(where: { $0.id == pageID }) else { return }
+        var edit = page.edit
+        edit.setDrawing(overlay)
+        rerender(page, with: edit)
+    }
+
+    private func rerender(_ page: ScannedPage, with edit: PageEdit) {
+        guard let source = page.sourceImage else { return }
+        Task {
+            let rendered = await Task.detached(priority: .userInitiated) {
+                ImageFilterService.render(source, edit: edit)
+            }.value
+            page.apply(edit: edit, rendered: rendered)
+            recognizedText = nil
+        }
+    }
+
+    // MARK: - OCR
+
+    private func recognizeCurrentPage() {
+        guard let page = sortedPages[safe: selectedPageIndex] else { return }
 
         isRecognizing = true
         recognizedText = nil
@@ -193,11 +292,6 @@ struct DocumentDetailView: View {
     }
 
     private func recognizeAllPages() {
-        if !store.isPurchased {
-            showPaywall = true
-            return
-        }
-
         isRecognizing = true
         recognizedText = nil
 
@@ -226,7 +320,7 @@ struct DocumentDetailView: View {
         }.value
     }
 
-    /// Exports a searchable PDF: pages not recognized yet are run through OCR first (Pro).
+    /// Exports a searchable PDF: pages not recognized yet are run through OCR first.
     private func exportPDF() {
         isExporting = true
         let pages = sortedPages
@@ -236,7 +330,7 @@ struct DocumentDetailView: View {
             for page in pages {
                 guard let image = page.image else { continue }
                 var lines = page.textLines
-                if lines == nil, store.isPurchased {
+                if lines == nil {
                     lines = try? await recognizeLines(on: page)
                     if let lines { page.setRecognized(lines) }
                 }
@@ -265,6 +359,20 @@ struct DocumentDetailView: View {
             }
         }
     }
+}
+
+struct SignatureRequest: Identifiable {
+    let id = UUID()
+    let pageID: UUID
+    let page: UIImage
+    let signature: UIImage
+}
+
+struct AnnotationRequest: Identifiable {
+    let id = UUID()
+    let pageID: UUID
+    let background: UIImage
+    let existing: PageOverlay?
 }
 
 struct ShareSheet: UIViewControllerRepresentable {

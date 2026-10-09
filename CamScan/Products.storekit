@@ -6,7 +6,7 @@
   "products" : [
     {
       "displayPrice" : "4.99",
-      "familyShareable" : false,
+      "familyShareable" : true,
       "internalID" : "1",
       "localizations" : [
         {

@@ -19,11 +19,13 @@ struct PaywallView: View {
                     .font(.largeTitle.bold())
 
                 VStack(alignment: .leading, spacing: 12) {
-                    featureRow("Unlimited scans", icon: "infinity")
-                    featureRow("OCR text recognition", icon: "text.viewfinder")
-                    featureRow("Batch scanning", icon: "doc.on.doc")
-                    featureRow("All image filters", icon: "camera.filters")
-                    featureRow("No ads, no subscription", icon: "heart.fill")
+                    featureRow("Sign documents", icon: "signature")
+                    featureRow("Draw & highlight on pages", icon: "pencil.tip.crop.circle")
+                    featureRow("Password-protected PDFs", icon: "lock.doc")
+                    featureRow("Merge & split documents", icon: "doc.on.doc")
+                    featureRow("Export tables to CSV", icon: "tablecells")
+                    featureRow("Face ID lock", icon: "faceid")
+                    featureRow("One-time purchase, Family Sharing", icon: "heart.fill")
                 }
                 .padding(.horizontal, 32)
 

@@ -6,7 +6,8 @@ struct DocumentListView: View {
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \ScannedDocument.createdAt, order: .reverse) private var documents: [ScannedDocument]
 
-    @StateObject private var store = StoreService()
+    @EnvironmentObject private var store: StoreService
+    @State private var showSettings = false
     @State private var showScanner = false
     @State private var showPaywall = false
     @State private var searchText = ""
@@ -53,6 +54,13 @@ struct DocumentListView: View {
                     .disabled(isImporting)
                 }
                 ToolbarItem(placement: .navigationBarLeading) {
+                    Button {
+                        showSettings = true
+                    } label: {
+                        Image(systemName: "gearshape")
+                    }
+                }
+                ToolbarItem(placement: .navigationBarLeading) {
                     if !store.isPurchased {
                         Button {
                             showPaywall = true
@@ -72,7 +80,6 @@ struct DocumentListView: View {
                 DocumentScannerView(
                     onScan: { images in
                         saveDocument(images: images)
-                        ScanLimitService.recordScan()
                         showScanner = false
                     },
                     onCancel: {
@@ -84,6 +91,9 @@ struct DocumentListView: View {
             .sheet(isPresented: $showPaywall) {
                 PaywallView(store: store)
             }
+            .sheet(isPresented: $showSettings) {
+                SettingsView()
+            }
             .photosPicker(isPresented: $showPhotoPicker, selection: $photoItems, maxSelectionCount: 30, matching: .images)
             .onChange(of: photoItems) { importPhotos() }
             .overlay {
@@ -94,7 +104,6 @@ struct DocumentListView: View {
                 }
             }
         }
-        .environmentObject(store)
     }
 
     private var emptyState: some View {
@@ -116,20 +125,6 @@ struct DocumentListView: View {
 
     private var documentList: some View {
         List {
-            if !store.isPurchased {
-                Section {
-                    HStack {
-                        Image(systemName: "sparkles")
-                            .foregroundStyle(.blue)
-                        Text("\(ScanLimitService.remainingScans) free scans left today")
-                            .font(.subheadline)
-                        Spacer()
-                        Button("Go Pro") { showPaywall = true }
-                            .font(.subheadline.bold())
-                    }
-                }
-            }
-
             Section {
                 ForEach(filteredDocuments) { document in
                     NavigationLink(value: document) {
@@ -145,19 +140,11 @@ struct DocumentListView: View {
     }
 
     private func startScan() {
-        if ScanLimitService.canScan() {
-            showScanner = true
-        } else {
-            showPaywall = true
-        }
+        showScanner = true
     }
 
     private func startImport() {
-        if ScanLimitService.canScan() {
-            showPhotoPicker = true
-        } else {
-            showPaywall = true
-        }
+        showPhotoPicker = true
     }
 
     /// Finds the document on each photo, crops it and evens out the lighting, off the main actor.
@@ -182,7 +169,6 @@ struct DocumentListView: View {
             if !processed.isEmpty {
                 let pages = processed.enumerated().map { ScannedPage(index: $0.offset, processed: $0.element) }
                 saveDocument(pages: pages)
-                ScanLimitService.recordScan()
             }
             isImporting = false
         }

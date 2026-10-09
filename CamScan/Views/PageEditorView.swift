@@ -68,7 +68,15 @@ struct PageEditorView: View {
             HStack(spacing: 32) {
                 toolButton("Crop", icon: "crop") { showCrop = true }
                 toolButton("Rotate", icon: "rotate.right") { edit.rotation = (edit.rotation + 1) % 4 }
-                toolButton("Reset", icon: "arrow.uturn.backward") { edit = PageEdit() }
+                toolButton("Reset", icon: "arrow.uturn.backward") {
+                    // Reset crop and tone; signatures and drawings have their own removal.
+                    let overlays = edit.overlays
+                    edit = PageEdit()
+                    edit.overlays = overlays
+                }
+                if !edit.overlays.isEmpty {
+                    toolButton("Remove Ink", icon: "signature") { edit.overlays = [] }
+                }
             }
 
             ScrollView(.horizontal, showsIndicators: false) {
