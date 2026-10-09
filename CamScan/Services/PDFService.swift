@@ -31,27 +31,65 @@ nonisolated enum PDFPageSize: String, CaseIterable, Identifiable, Sendable {
     }
 }
 
+nonisolated struct PDFPageContent: Sendable {
+    let image: UIImage
+    let lines: [TextLine]
+}
+
 nonisolated enum PDFService {
     /// A cropped sheet of paper should fill its page. Aspect mismatches up to this much
     /// come from perspective error, so the scan is stretched to the page instead of letterboxed.
     static let stretchTolerance: CGFloat = 0.08
 
-    @MainActor
-    static func generatePDF(from pages: [ScannedPage], pageSize: PDFPageSize) -> Data {
-        let images = pages.sorted { $0.index < $1.index }.compactMap(\.image)
-        return generatePDF(from: images, pageSize: pageSize)
+    static func generatePDF(from images: [UIImage], pageSize: PDFPageSize) -> Data {
+        generatePDF(from: images.map { PDFPageContent(image: $0, lines: []) }, pageSize: pageSize)
     }
 
-    static func generatePDF(from images: [UIImage], pageSize: PDFPageSize) -> Data {
+    /// Each page is the scan with an invisible text layer on top, so the PDF can be searched and copied from.
+    static func generatePDF(from pages: [PDFPageContent], pageSize: PDFPageSize) -> Data {
         let renderer = UIGraphicsPDFRenderer(bounds: pageRect(for: CGSize(width: 1, height: 1), pageSize: .a4))
 
         return renderer.pdfData { context in
-            for image in images {
-                let page = pageRect(for: image.size, pageSize: pageSize)
+            for content in pages {
+                let page = pageRect(for: content.image.size, pageSize: pageSize)
                 context.beginPage(withBounds: page, pageInfo: [:])
-                image.draw(in: drawRect(for: image.size, in: page))
+                let imageRect = drawRect(for: content.image.size, in: page)
+                content.image.draw(in: imageRect)
+                drawTextLayer(content.lines, in: imageRect, context: context.cgContext)
             }
         }
+    }
+
+    private static func drawTextLayer(_ lines: [TextLine], in imageRect: CGRect, context: CGContext) {
+        guard !lines.isEmpty else { return }
+        context.saveGState()
+        context.setTextDrawingMode(.invisible)
+
+        for line in lines where !line.text.isEmpty {
+            let rect = CGRect(
+                x: imageRect.minX + line.box.minX * imageRect.width,
+                y: imageRect.minY + line.box.minY * imageRect.height,
+                width: line.box.width * imageRect.width,
+                height: line.box.height * imageRect.height
+            )
+            guard rect.width > 1, rect.height > 1 else { continue }
+
+            let font = UIFont.systemFont(ofSize: rect.height * 0.85)
+            let text = NSAttributedString(string: line.text, attributes: [
+                .font: font,
+                .foregroundColor: UIColor.clear,
+            ])
+            let textWidth = text.size().width
+            guard textWidth > 0 else { continue }
+
+            // Stretch horizontally so selection highlights match the words on the scan.
+            context.saveGState()
+            context.translateBy(x: rect.minX, y: rect.minY)
+            context.scaleBy(x: rect.width / textWidth, y: 1)
+            text.draw(at: .zero)
+            context.restoreGState()
+        }
+        context.restoreGState()
     }
 
     /// Paper sizes turn landscape for landscape scans. "Fit to Image" keeps the scan's

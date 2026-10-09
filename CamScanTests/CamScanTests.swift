@@ -83,3 +83,22 @@ struct PageEditTests {
         #expect(rendered.size.width < rendered.size.height)
     }
 }
+
+struct SearchablePDFTests {
+
+    @Test func textLayerMakesPDFSearchable() throws {
+        let image = UIGraphicsImageRenderer(size: CGSize(width: 600, height: 800)).image { context in
+            UIColor.white.setFill()
+            context.fill(CGRect(x: 0, y: 0, width: 600, height: 800))
+        }
+        let lines = [
+            TextLine(text: "Invoice 42", box: CGRect(x: 0.1, y: 0.1, width: 0.4, height: 0.04)),
+            TextLine(text: "Счёт за сентябрь", box: CGRect(x: 0.1, y: 0.2, width: 0.6, height: 0.04)),
+        ]
+
+        let data = PDFService.generatePDF(from: [PDFPageContent(image: image, lines: lines)], pageSize: .a4)
+        let text = try #require(PDFDocument(data: data)?.string)
+        #expect(text.contains("Invoice 42"))
+        #expect(text.contains("Счёт за сентябрь"))
+    }
+}

@@ -12,6 +12,8 @@ struct DocumentDetailView: View {
     @State private var showShareSheet = false
     @State private var pdfURL: URL?
     @State private var showEditor = false
+    @State private var isExporting = false
+    @State private var showPages = false
     @State private var showPaywall = false
     @AppStorage("pdfPageSize") private var pageSize: PDFPageSize = .localeDefault
 
@@ -46,6 +48,11 @@ struct DocumentDetailView: View {
                     .padding()
             }
 
+            if isExporting {
+                ProgressView("Preparing PDF...")
+                    .padding()
+            }
+
             if let text = recognizedText, !text.isEmpty {
                 ScrollView {
                     Text(text)
@@ -75,6 +82,12 @@ struct DocumentDetailView: View {
                         Label("Edit Page", systemImage: "crop")
                     }
 
+                    Button {
+                        showPages = true
+                    } label: {
+                        Label("Manage Pages", systemImage: "rectangle.stack")
+                    }
+
                     Divider()
 
                     Button {
@@ -98,6 +111,7 @@ struct DocumentDetailView: View {
                     } label: {
                         Label("Export PDF", systemImage: "arrow.up.doc")
                     }
+                    .disabled(isExporting)
 
                     Picker(selection: $pageSize) {
                         ForEach(PDFPageSize.allCases) { size in
@@ -144,6 +158,12 @@ struct DocumentDetailView: View {
         .sheet(isPresented: $showPaywall) {
             PaywallView(store: store)
         }
+        .sheet(isPresented: $showPages) {
+            PagesView(document: document, store: store)
+        }
+        .onChange(of: document.pages.count) {
+            selectedPageIndex = min(selectedPageIndex, max(0, document.pages.count - 1))
+        }
         .onChange(of: selectedPageIndex) {
             // Show cached OCR if available
             recognizedText = sortedPages[safe: selectedPageIndex]?.recognizedText
@@ -151,8 +171,7 @@ struct DocumentDetailView: View {
     }
 
     private func recognizeCurrentPage() {
-        guard let page = sortedPages[safe: selectedPageIndex],
-              let image = page.image else { return }
+        guard let page = sortedPages[safe: selectedPageIndex] else { return }
 
         if !store.isPurchased {
             showPaywall = true
@@ -164,9 +183,8 @@ struct DocumentDetailView: View {
 
         Task {
             do {
-                let text = try await OCRService.recognizeText(in: image)
-                page.recognizedText = text
-                recognizedText = text
+                page.setRecognized(try await recognizeLines(on: page))
+                recognizedText = page.recognizedText
             } catch {
                 recognizedText = "Failed: \(error.localizedDescription)"
             }
@@ -187,11 +205,9 @@ struct DocumentDetailView: View {
             var allText: [String] = []
 
             for page in sortedPages {
-                guard let image = page.image else { continue }
                 do {
-                    let text = try await OCRService.recognizeText(in: image)
-                    page.recognizedText = text
-                    allText.append("--- Page \(page.index + 1) ---\n\(text)")
+                    page.setRecognized(try await recognizeLines(on: page))
+                    allText.append("--- Page \(page.index + 1) ---\n\(page.recognizedText ?? "")")
                 } catch {
                     allText.append("--- Page \(page.index + 1) ---\nFailed: \(error.localizedDescription)")
                 }
@@ -202,17 +218,51 @@ struct DocumentDetailView: View {
         }
     }
 
-    private func exportPDF() {
-        let pdfData = PDFService.generatePDF(from: sortedPages, pageSize: pageSize)
-        let fileName = PDFService.fileName(for: document.title)
-        let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent(fileName)
+    /// Runs OCR off the main actor.
+    private func recognizeLines(on page: ScannedPage) async throws -> [TextLine] {
+        guard let image = page.image else { return [] }
+        return try await Task.detached(priority: .userInitiated) {
+            try OCRService.recognizeLines(in: image)
+        }.value
+    }
 
-        do {
-            try pdfData.write(to: tempURL)
-            pdfURL = tempURL
-            showShareSheet = true
-        } catch {
-            print("Failed to write PDF: \(error)")
+    /// Exports a searchable PDF: pages not recognized yet are run through OCR first (Pro).
+    private func exportPDF() {
+        isExporting = true
+        let pages = sortedPages
+
+        Task {
+            var contents: [PDFPageContent] = []
+            for page in pages {
+                guard let image = page.image else { continue }
+                var lines = page.textLines
+                if lines == nil, store.isPurchased {
+                    lines = try? await recognizeLines(on: page)
+                    if let lines { page.setRecognized(lines) }
+                }
+                contents.append(PDFPageContent(image: image, lines: lines ?? []))
+            }
+
+            let pageContents = contents
+            let pageSize = pageSize
+            let fileName = PDFService.fileName(for: document.title)
+            let url = await Task.detached(priority: .userInitiated) { () -> URL? in
+                let data = PDFService.generatePDF(from: pageContents, pageSize: pageSize)
+                let url = FileManager.default.temporaryDirectory.appendingPathComponent(fileName)
+                do {
+                    try data.write(to: url)
+                    return url
+                } catch {
+                    print("Failed to write PDF: \(error)")
+                    return nil
+                }
+            }.value
+
+            isExporting = false
+            if let url {
+                pdfURL = url
+                showShareSheet = true
+            }
         }
     }
 }

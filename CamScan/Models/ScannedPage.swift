@@ -13,6 +13,8 @@ final class ScannedPage {
     /// JSON-encoded `PageEdit`.
     var editData: Data?
     var recognizedText: String?
+    /// JSON-encoded `[TextLine]`: OCR result with positions, used for the PDF text layer.
+    var textLinesData: Data?
 
     var document: ScannedDocument?
 
@@ -44,6 +46,15 @@ final class ScannedPage {
         editData.flatMap { try? JSONDecoder().decode(PageEdit.self, from: $0) } ?? PageEdit()
     }
 
+    var textLines: [TextLine]? {
+        textLinesData.flatMap { try? JSONDecoder().decode([TextLine].self, from: $0) }
+    }
+
+    func setRecognized(_ lines: [TextLine]) {
+        textLinesData = try? JSONEncoder().encode(lines)
+        recognizedText = OCRService.text(of: lines)
+    }
+
     func apply(edit: PageEdit, rendered: UIImage) {
         if originalImageData == nil {
             originalImageData = imageData
@@ -51,5 +62,6 @@ final class ScannedPage {
         imageData = rendered.jpegData(compressionQuality: 0.8) ?? imageData
         editData = try? JSONEncoder().encode(edit)
         recognizedText = nil
+        textLinesData = nil
     }
 }
