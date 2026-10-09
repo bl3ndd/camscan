@@ -86,7 +86,7 @@ struct PageEditorView: View {
             }
 
             ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 16) {
+                HStack(spacing: 10) {
                     ForEach(ImageFilter.allCases) { filter in
                         filterButton(filter)
                     }
@@ -140,7 +140,10 @@ struct PageEditorView: View {
                     .font(.caption2.weight(edit.filter == filter ? .semibold : .regular))
                     .foregroundStyle(edit.filter == filter ? Color.brand : .primary)
                     .lineLimit(1)
+                    .minimumScaleFactor(0.7)
             }
+            // Equal widths, so all five filters fit on a phone screen.
+            .frame(width: 64)
         }
         .buttonStyle(.plain)
         .accessibilityIdentifier("filter-\(filter.rawValue)")
