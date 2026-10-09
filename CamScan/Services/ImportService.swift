@@ -59,20 +59,16 @@ nonisolated extension ImportService {
 
 nonisolated enum DocumentDetector {
     /// Corners of the document on an upright image, or `nil` if none was found.
-    /// The ML document segmenter is tried first; when it is unsure, classic rectangle
-    /// detection takes over, which handles a high-contrast sheet on a desk well.
+    /// Asks both the ML document segmenter and classic rectangle detection and takes the
+    /// largest plausible quad: the segmenter is sometimes confidently wrong and returns
+    /// only part of the sheet, while a part is always smaller than the whole page.
     static func detectQuad(in image: UIImage) -> Quad? {
         let candidates = detect(in: image)
-        if let segment = candidates.segment, segment.confidence >= 0.5, area(of: segment) > 0.1 {
-            return quad(from: segment)
-        }
-        if let rectangle = candidates.rectangle {
-            return quad(from: rectangle)
-        }
-        if let segment = candidates.segment, area(of: segment) > 0.15 {
-            return quad(from: segment)
-        }
-        return nil
+        let plausible = [candidates.segment, candidates.rectangle]
+            .compactMap { $0 }
+            .filter { $0.confidence >= 0.3 && area(of: $0) > 0.1 }
+        guard let best = plausible.max(by: { area(of: $0) < area(of: $1) }) else { return nil }
+        return quad(from: best)
     }
 
     /// What each detector found, for test failure messages.

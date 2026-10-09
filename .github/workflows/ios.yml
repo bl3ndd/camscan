@@ -67,6 +67,7 @@ jobs:
       # Screenshots of the main screens in Russian and English. Informational:
       # a flaky UI step must not block the build.
       - name: UI screenshots
+        if: always()
         continue-on-error: true
         run: |
           set +e
