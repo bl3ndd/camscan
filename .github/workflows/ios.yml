@@ -23,7 +23,7 @@ concurrency:
 jobs:
   build-and-test:
     runs-on: macos-26
-    timeout-minutes: 25
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
 
@@ -54,16 +54,67 @@ jobs:
             -scheme CamScan \
             -destination "id=$SIM_UDID" \
             -only-testing:CamScanTests \
+            -resultBundlePath Unit.xcresult \
             CODE_SIGNING_ALLOWED=NO \
             > build.log 2>&1
           status=$?
-          grep -E "error:|warning: .*(isolat|Sendable|concurren)|✔|✘|\*\* (BUILD|TEST)" build.log
+          grep -E "error:|warning: .*(isolat|Sendable|concurren)|✔|✘|Test Case .*(passed|failed)|\*\* (BUILD|TEST)" build.log
           echo "xcodebuild exit code: $status"
           exit $status
 
-      - name: Upload log
+      # Screenshots of the main screens in Russian and English. Informational:
+      # a flaky UI step must not block the build.
+      - name: UI screenshots
+        continue-on-error: true
+        run: |
+          set +e
+          xcodebuild test \
+            -project CamScan.xcodeproj \
+            -scheme CamScan \
+            -destination "id=$SIM_UDID" \
+            -only-testing:CamScanUITests \
+            -resultBundlePath UI.xcresult \
+            CODE_SIGNING_ALLOWED=NO \
+            > ui.log 2>&1
+          status=$?
+          grep -E "error:|Test Case .*(passed|failed)|XCTAssert|\*\* (BUILD|TEST)" ui.log
+          echo "xcodebuild exit code: $status"
+          exit $status
+
+      - name: Export screenshots
+        if: always()
+        run: |
+          mkdir -p screenshots
+          for bundle in Unit.xcresult UI.xcresult; do
+            [ -d "$bundle" ] || continue
+            out="export-${bundle%.xcresult}"
+            xcrun xcresulttool export attachments --path "$bundle" --output-path "$out" || continue
+            python3 - "$out" screenshots <<'PY'
+          import json, os, shutil, sys
+          src, dst = sys.argv[1], sys.argv[2]
+          manifest = json.load(open(os.path.join(src, "manifest.json")))
+          for test in manifest:
+              for item in test.get("attachments", []):
+                  name = item.get("suggestedHumanReadableName") or item["exportedFileName"]
+                  base, ext = os.path.splitext(item["exportedFileName"])
+                  label = name.split("_")[0] if "_" in name else os.path.splitext(name)[0]
+                  shutil.copy(os.path.join(src, item["exportedFileName"]), os.path.join(dst, label + ext))
+          PY
+          done
+          ls -la screenshots
+
+      - name: Upload screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: screenshots
+          path: screenshots
+
+      - name: Upload logs
         if: failure()
         uses: actions/upload-artifact@v4
         with:
           name: build-log
-          path: build.log
+          path: |
+            build.log
+            ui.log

@@ -80,6 +80,7 @@ struct DocumentListView: View {
                     } label: {
                         Image(systemName: "gearshape")
                     }
+                    .accessibilityIdentifier("settingsButton")
                 }
                 ToolbarItem(placement: .navigationBarLeading) {
                     if !documents.isEmpty {
@@ -112,6 +113,7 @@ struct DocumentListView: View {
                                 .foregroundStyle(.white)
                                 .clipShape(Capsule())
                         }
+                        .accessibilityIdentifier("proButton")
                     }
                 }
             }

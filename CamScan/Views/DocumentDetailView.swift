@@ -89,6 +89,7 @@ struct DocumentDetailView: View {
                     } label: {
                         Label("Edit Page", systemImage: "crop")
                     }
+                    .accessibilityIdentifier("editPage")
 
                     Button {
                         showPages = true
@@ -196,6 +197,7 @@ struct DocumentDetailView: View {
                 } label: {
                     Image(systemName: "ellipsis.circle")
                 }
+                .accessibilityIdentifier("documentMenu")
             }
         }
         .alert("Protect PDF", isPresented: $showPasswordPrompt) {

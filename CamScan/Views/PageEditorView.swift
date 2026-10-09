@@ -67,6 +67,7 @@ struct PageEditorView: View {
         VStack(spacing: 12) {
             HStack(spacing: 32) {
                 toolButton("Crop", icon: "crop") { showCrop = true }
+                    .accessibilityIdentifier("cropTool")
                 toolButton("Rotate", icon: "rotate.right") { edit.rotation = (edit.rotation + 1) % 4 }
                 toolButton("Reset", icon: "arrow.uturn.backward") {
                     // Reset crop and tone; signatures and drawings have their own removal.
@@ -128,6 +129,7 @@ struct PageEditorView: View {
             }
         }
         .buttonStyle(.plain)
+        .accessibilityIdentifier("filter-\(filter.rawValue)")
     }
 
     private func sliderRow(icon: String, value: Binding<Double>, range: ClosedRange<Double>) -> some View {

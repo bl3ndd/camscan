@@ -13,6 +13,23 @@ struct CamScanApp: App {
     @StateObject private var store = StoreService()
     @StateObject private var appLock = AppLock()
     @Environment(\.scenePhase) private var scenePhase
+    private let container: ModelContainer
+
+    init() {
+        let schema = Schema([ScannedDocument.self, Folder.self])
+        #if DEBUG
+        if UITestSeed.isActive {
+            container = try! ModelContainer(for: schema, configurations: ModelConfiguration(isStoredInMemoryOnly: true))
+            UITestSeed.seed(container.mainContext)
+            return
+        }
+        #endif
+        do {
+            container = try ModelContainer(for: schema)
+        } catch {
+            fatalError("Couldn't open the document store: \(error)")
+        }
+    }
 
     var body: some Scene {
         WindowGroup {
@@ -26,7 +43,7 @@ struct CamScanApp: App {
                 .environmentObject(store)
                 .environmentObject(appLock)
         }
-        .modelContainer(for: [ScannedDocument.self, Folder.self])
+        .modelContainer(container)
         .onChange(of: scenePhase) { _, phase in
             if phase == .background && store.isPurchased {
                 appLock.lock()

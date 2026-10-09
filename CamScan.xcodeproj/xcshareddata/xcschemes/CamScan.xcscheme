@@ -38,6 +38,16 @@
                ReferencedContainer = "container:CamScan.xcodeproj">
             </BuildableReference>
          </TestableReference>
+         <TestableReference
+            skipped = "NO">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "8D80D3412F77E3DB0095B7AD"
+               BuildableName = "CamScanUITests.xctest"
+               BlueprintName = "CamScanUITests"
+               ReferencedContainer = "container:CamScan.xcodeproj">
+            </BuildableReference>
+         </TestableReference>
       </Testables>
    </TestAction>
    <LaunchAction
