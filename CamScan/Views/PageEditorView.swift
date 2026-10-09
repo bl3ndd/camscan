@@ -95,7 +95,7 @@ struct PageEditorView: View {
         .background(.ultraThinMaterial)
     }
 
-    private func toolButton(_ title: String, icon: String, action: @escaping () -> Void) -> some View {
+    private func toolButton(_ title: LocalizedStringKey, icon: String, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             VStack(spacing: 4) {
                 Image(systemName: icon)
@@ -122,7 +122,7 @@ struct PageEditorView: View {
                             .stroke(edit.filter == filter ? .blue : .clear, lineWidth: 2)
                     )
 
-                Text(filter.rawValue)
+                Text(filter.title)
                     .font(.caption2)
                     .lineLimit(1)
             }

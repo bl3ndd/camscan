@@ -83,7 +83,7 @@ struct PaywallView: View {
         return "Unlock Pro — $4.99"
     }
 
-    private func featureRow(_ text: String, icon: String) -> some View {
+    private func featureRow(_ text: LocalizedStringKey, icon: String) -> some View {
         HStack(spacing: 12) {
             Image(systemName: icon)
                 .frame(width: 28)

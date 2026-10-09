@@ -1,3 +1,4 @@
+import Foundation
 import UIKit
 import PDFKit
 
@@ -8,7 +9,7 @@ nonisolated enum PDFPageSize: String, CaseIterable, Identifiable, Sendable {
 
     var id: String { rawValue }
 
-    var title: String {
+    var title: LocalizedStringResource {
         switch self {
         case .a4: "A4"
         case .letter: "Letter"

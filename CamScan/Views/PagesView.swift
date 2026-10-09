@@ -102,7 +102,7 @@ struct PagesView: View {
         let moving = sortedPages.filter { selection.contains($0.id) }
         guard !moving.isEmpty, moving.count < document.pages.count else { return }
 
-        let newDocument = ScannedDocument(title: "\(document.title) (part)")
+        let newDocument = ScannedDocument(title: String(localized: "\(document.title) (part)"))
         for (index, page) in moving.enumerated() {
             newDocument.pages.append(ScannedPage(index: index, copying: page))
         }

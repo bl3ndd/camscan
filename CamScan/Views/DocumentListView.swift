@@ -71,7 +71,7 @@ struct DocumentListView: View {
                 }
                 ToolbarItem(placement: .navigationBarLeading) {
                     if !documents.isEmpty {
-                        Button(editMode.isEditing ? "Done" : "Select") {
+                        Button(editMode.isEditing ? LocalizedStringKey("Done") : LocalizedStringKey("Select")) {
                             withAnimation {
                                 editMode = editMode.isEditing ? .inactive : .active
                                 selection.removeAll()
@@ -221,7 +221,7 @@ struct DocumentListView: View {
                 pages.append(ScannedPage(index: pages.count, copying: page))
             }
         }
-        saveDocument(pages: pages, title: "Merged \(formattedDate())")
+        saveDocument(pages: pages, title: String(localized: "Merged \(formattedDate())"))
 
         withAnimation {
             selection.removeAll()
@@ -261,7 +261,7 @@ struct DocumentListView: View {
     }
 
     private func saveDocument(pages: [ScannedPage], title: String? = nil) {
-        let document = ScannedDocument(title: title ?? "Scan \(formattedDate())")
+        let document = ScannedDocument(title: title ?? String(localized: "Scan \(formattedDate())"))
         document.pages.append(contentsOf: pages)
         modelContext.insert(document)
     }
@@ -307,7 +307,7 @@ struct DocumentRow: View {
                     .font(.headline)
                     .lineLimit(1)
 
-                Text("\(document.pageCount) page\(document.pageCount == 1 ? "" : "s")")
+                Text("\(document.pageCount) pages")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
 

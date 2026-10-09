@@ -1,3 +1,4 @@
+import Foundation
 import UIKit
 import CoreImage
 
@@ -9,6 +10,17 @@ nonisolated enum ImageFilter: String, CaseIterable, Identifiable, Codable, Senda
     case blackWhite = "B&W"
 
     var id: String { rawValue }
+
+    var title: LocalizedStringResource {
+        switch self {
+        case .original: "Original"
+        case .auto: "Auto"
+        case .magicColor: "Magic Color"
+        case .grayscale: "Grayscale"
+        case .blackWhite: "B&W"
+        }
+    }
+
     var icon: String {
         switch self {
         case .original: "photo"

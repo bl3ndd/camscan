@@ -28,7 +28,7 @@ final class AppLock: ObservableObject {
         let context = LAContext()
         let success = (try? await context.evaluatePolicy(
             .deviceOwnerAuthentication,
-            localizedReason: "Unlock your documents"
+            localizedReason: String(localized: "Unlock your documents")
         )) ?? false
         if success {
             isLocked = false
@@ -41,7 +41,7 @@ final class AppLock: ObservableObject {
             let context = LAContext()
             let success = (try? await context.evaluatePolicy(
                 .deviceOwnerAuthentication,
-                localizedReason: "Turn on app lock"
+                localizedReason: String(localized: "Turn on app lock")
             )) ?? false
             guard success else { return false }
         }
