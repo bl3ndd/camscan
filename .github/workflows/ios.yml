@@ -48,15 +48,18 @@ jobs:
 
       - name: Build and run unit tests
         run: |
-          set -o pipefail
+          set +e
           xcodebuild test \
             -project CamScan.xcodeproj \
             -scheme CamScan \
             -destination "id=$SIM_UDID" \
             -only-testing:CamScanTests \
             CODE_SIGNING_ALLOWED=NO \
-            | tee build.log | grep -E "error:|warning: .*(isolat|Sendable|concurren)|Test (Suite|Case)|✔|✘|\*\* (BUILD|TEST)" || true
-          exit ${PIPESTATUS[0]}
+            > build.log 2>&1
+          status=$?
+          grep -E "error:|warning: .*(isolat|Sendable|concurren)|✔|✘|\*\* (BUILD|TEST)" build.log
+          echo "xcodebuild exit code: $status"
+          exit $status
 
       - name: Upload log
         if: failure()

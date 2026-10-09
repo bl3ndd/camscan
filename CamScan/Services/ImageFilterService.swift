@@ -21,7 +21,7 @@ nonisolated enum ImageFilter: String, CaseIterable, Identifiable, Codable, Senda
 }
 
 nonisolated enum ImageFilterService {
-    nonisolated(unsafe) private static let context = CIContext()
+    private static let context = CIContext()
 
     /// Applies crop (perspective correction), tone and rotation to an upright source image.
     static func render(_ source: UIImage, edit: PageEdit) -> UIImage {

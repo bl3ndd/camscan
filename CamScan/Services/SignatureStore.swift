@@ -1,5 +1,6 @@
 import UIKit
 import PencilKit
+import SwiftUI
 
 /// The user's saved signature, kept as a PencilKit drawing in Application Support.
 enum SignatureStore {
