@@ -1,0 +1,34 @@
+{
+  "identifier" : "com.camscan.products",
+  "nonRenewingSubscriptions" : [
+
+  ],
+  "products" : [
+    {
+      "displayPrice" : "4.99",
+      "familyShareable" : false,
+      "internalID" : "1",
+      "localizations" : [
+        {
+          "description" : "Unlimited scans, OCR, filters, and more",
+          "displayName" : "CamScan Pro",
+          "locale" : "en_US"
+        }
+      ],
+      "productID" : "com.camscan.pro",
+      "referenceName" : "CamScan Pro",
+      "type" : "NonConsumable"
+    }
+  ],
+  "settings" : {
+    "_applicationInternalID" : "1",
+    "_developerTeamID" : ""
+  },
+  "subscriptionGroups" : [
+
+  ],
+  "version" : {
+    "major" : 3,
+    "minor" : 0
+  }
+}
