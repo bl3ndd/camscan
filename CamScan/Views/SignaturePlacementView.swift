@@ -33,7 +33,7 @@ struct SignaturePlacementView: View {
                         .resizable()
                         .frame(width: signatureSize.width, height: signatureSize.height)
                         .padding(6)
-                        .overlay(RoundedRectangle(cornerRadius: 4).stroke(Color.accentColor, style: StrokeStyle(lineWidth: 1, dash: [4])))
+                        .overlay(RoundedRectangle(cornerRadius: 4).stroke(Color.brand, style: StrokeStyle(lineWidth: 1, dash: [4])))
                         .position(x: rect.minX + center.x * rect.width, y: rect.minY + center.y * rect.height)
                         .gesture(
                             DragGesture()

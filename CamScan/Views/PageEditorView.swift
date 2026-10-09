@@ -133,12 +133,12 @@ struct PageEditorView: View {
                     .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
                     .overlay(
                         RoundedRectangle(cornerRadius: 8, style: .continuous)
-                            .strokeBorder(edit.filter == filter ? Color.accentColor : Color.primary.opacity(0.1), lineWidth: edit.filter == filter ? 3 : 1)
+                            .strokeBorder(edit.filter == filter ? Color.brand : Color.primary.opacity(0.1), lineWidth: edit.filter == filter ? 3 : 1)
                     )
 
                 Text(filter.title)
                     .font(.caption2.weight(edit.filter == filter ? .semibold : .regular))
-                    .foregroundStyle(edit.filter == filter ? Color.accentColor : .primary)
+                    .foregroundStyle(edit.filter == filter ? Color.brand : .primary)
                     .lineLimit(1)
             }
         }

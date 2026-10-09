@@ -34,13 +34,15 @@ final class ScreenshotTests: XCTestCase {
             snapshot("\(language.code)-03-document")
 
             if tapIfExists(app.buttons["shareMenu"]) {
+                sleep(1)
                 snapshot("\(language.code)-04-share")
-                app.buttons["shareMenu"].tap() // close the menu
+                dismissMenu(in: app)
             }
 
             if tapIfExists(app.buttons["documentMenu"]) {
+                sleep(1)
                 snapshot("\(language.code)-04b-more")
-                app.buttons["documentMenu"].tap()
+                dismissMenu(in: app)
             }
 
             if tapIfExists(app.buttons["editPage"]) {
@@ -97,6 +99,13 @@ final class ScreenshotTests: XCTestCase {
         guard element.waitForExistence(timeout: 5) else { return false }
         element.tap()
         return true
+    }
+
+    /// Taps empty space near the top so the open menu closes without choosing an item.
+    @MainActor
+    private func dismissMenu(in app: XCUIApplication) {
+        app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.04)).tap()
+        sleep(1)
     }
 
     @MainActor

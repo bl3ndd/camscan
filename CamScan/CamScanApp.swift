@@ -42,6 +42,7 @@ struct CamScanApp: App {
                 }
                 .environmentObject(store)
                 .environmentObject(appLock)
+                .tint(.brand)
         }
         .modelContainer(container)
         .onChange(of: scenePhase) { _, phase in

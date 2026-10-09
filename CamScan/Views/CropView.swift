@@ -29,9 +29,9 @@ struct CropView: View {
                         .position(x: rect.midX, y: rect.midY)
 
                     QuadShape(points: points)
-                        .fill(Color.accentColor.opacity(0.15))
+                        .fill(Color.brand.opacity(0.15))
                     QuadShape(points: points)
-                        .stroke(Color.accentColor, lineWidth: 2)
+                        .stroke(Color.brand, lineWidth: 2)
 
                     ForEach(0..<4, id: \.self) { index in
                         handle
@@ -91,7 +91,7 @@ struct CropView: View {
             Circle()
                 .fill(.white)
                 .frame(width: 22, height: 22)
-                .overlay(Circle().stroke(Color.accentColor, lineWidth: 3))
+                .overlay(Circle().stroke(Color.brand, lineWidth: 3))
                 .shadow(radius: 2)
         }
         .frame(width: 44, height: 44)

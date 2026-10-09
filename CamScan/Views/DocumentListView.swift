@@ -127,7 +127,7 @@ struct DocumentListView: View {
                         .font(.caption.bold())
                         .padding(.horizontal, 10)
                         .padding(.vertical, 4)
-                        .background(Color.accentColor, in: Capsule())
+                        .background(Color.brand, in: Capsule())
                         .foregroundStyle(.white)
                 }
                 .accessibilityIdentifier("proButton")
@@ -206,12 +206,24 @@ struct DocumentListView: View {
                     .padding(.horizontal, 32)
                     .padding(.vertical, 16)
                     .foregroundStyle(.white)
-                    .background(Color.accentColor, in: Capsule())
-                    .shadow(color: Color.accentColor.opacity(0.35), radius: 12, y: 6)
+                    .background(Color.brand, in: Capsule())
+                    .shadow(color: Color.brand.opacity(0.35), radius: 12, y: 6)
             }
             .buttonStyle(.plain)
             .accessibilityIdentifier("scanButton")
+            .padding(.top, 24)
             .padding(.bottom, 8)
+            .frame(maxWidth: .infinity)
+            .background {
+                // Content scrolling under the button fades out instead of clashing with it.
+                LinearGradient(
+                    colors: [Color(.systemGroupedBackground).opacity(0), Color(.systemGroupedBackground)],
+                    startPoint: .top,
+                    endPoint: .center
+                )
+                .ignoresSafeArea()
+                .allowsHitTesting(false)
+            }
         }
     }
 
@@ -452,7 +464,7 @@ struct DocumentCard: View {
                 .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                 .overlay {
                     RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .strokeBorder(selection == true ? Color.accentColor : Color.primary.opacity(0.08), lineWidth: selection == true ? 3 : 1)
+                        .strokeBorder(selection == true ? Color.brand : Color.primary.opacity(0.08), lineWidth: selection == true ? 3 : 1)
                 }
                 .shadow(color: .black.opacity(0.08), radius: 6, y: 3)
                 .overlay(alignment: .bottomTrailing) {
@@ -469,7 +481,7 @@ struct DocumentCard: View {
                     if let selection {
                         Image(systemName: selection ? "checkmark.circle.fill" : "circle")
                             .font(.title2)
-                            .foregroundStyle(selection ? Color.accentColor : .white)
+                            .foregroundStyle(selection ? Color.brand : .white)
                             .shadow(radius: 2)
                             .padding(8)
                     }
