@@ -59,15 +59,65 @@ nonisolated extension ImportService {
 
 nonisolated enum DocumentDetector {
     /// Corners of the document on an upright image, or `nil` if none was found.
+    /// The ML document segmenter is tried first; when it is unsure, classic rectangle
+    /// detection takes over, which handles a high-contrast sheet on a desk well.
     static func detectQuad(in image: UIImage) -> Quad? {
-        guard let cgImage = image.upright().cgImage else { return nil }
+        let candidates = detect(in: image)
+        if let segment = candidates.segment, segment.confidence >= 0.5, area(of: segment) > 0.1 {
+            return quad(from: segment)
+        }
+        if let rectangle = candidates.rectangle {
+            return quad(from: rectangle)
+        }
+        if let segment = candidates.segment, area(of: segment) > 0.15 {
+            return quad(from: segment)
+        }
+        return nil
+    }
 
-        let request = VNDetectDocumentSegmentationRequest()
+    /// What each detector found, for test failure messages.
+    static func diagnostics(for image: UIImage) -> String {
+        let candidates = detect(in: image)
+        func describe(_ observation: VNRectangleObservation?) -> String {
+            guard let observation else { return "none" }
+            return String(format: "confidence %.2f, area %.2f", observation.confidence, area(of: observation))
+        }
+        return "segmentation: \(describe(candidates.segment)); rectangles: \(describe(candidates.rectangle))"
+    }
+
+    private static func detect(in image: UIImage) -> (segment: VNRectangleObservation?, rectangle: VNRectangleObservation?) {
+        guard let cgImage = image.upright().cgImage else { return (nil, nil) }
+
+        let segmentation = VNDetectDocumentSegmentationRequest()
+        let rectangles = VNDetectRectanglesRequest()
+        rectangles.minimumAspectRatio = 0.3
+        rectangles.maximumAspectRatio = 1
+        rectangles.minimumSize = 0.25
+        rectangles.quadratureTolerance = 30
+        rectangles.minimumConfidence = 0.5
+        rectangles.maximumObservations = 3
+
         let handler = VNImageRequestHandler(cgImage: cgImage, orientation: .up, options: [:])
-        guard (try? handler.perform([request])) != nil,
-              let observation = request.results?.first,
-              observation.confidence > 0.5 else { return nil }
+        try? handler.perform([segmentation, rectangles])
 
+        let segment = segmentation.results?.first
+        let rectangle = rectangles.results?.max { area(of: $0) < area(of: $1) }
+        return (segment, rectangle)
+    }
+
+    /// Normalized area of the quadrilateral (shoelace formula).
+    private static func area(of observation: VNRectangleObservation) -> CGFloat {
+        let points = [observation.topLeft, observation.topRight, observation.bottomRight, observation.bottomLeft]
+        var sum: CGFloat = 0
+        for index in points.indices {
+            let a = points[index]
+            let b = points[(index + 1) % points.count]
+            sum += a.x * b.y - b.x * a.y
+        }
+        return abs(sum) / 2
+    }
+
+    private static func quad(from observation: VNRectangleObservation) -> Quad {
         // Vision has a bottom-left origin.
         func flipped(_ point: CGPoint) -> CGPoint {
             CGPoint(x: point.x, y: 1 - point.y)

@@ -10,7 +10,10 @@ final class FilterPreviewTests: XCTestCase {
         let photo = SampleDocuments.photo(of: SampleDocuments.invoice)
         attach(photo, "filter-00-photo")
 
-        let quad = try XCTUnwrap(DocumentDetector.detectQuad(in: photo), "Page not found on the photo")
+        let quad = try XCTUnwrap(
+            DocumentDetector.detectQuad(in: photo),
+            "Page not found on the photo (\(DocumentDetector.diagnostics(for: photo)))"
+        )
         let cropped = ImageFilterService.render(photo, edit: PageEdit(quad: quad, filter: .original))
         attach(cropped, "filter-01-cropped")
 
@@ -21,7 +24,7 @@ final class FilterPreviewTests: XCTestCase {
 
     func testFiltersOnPhoto() throws {
         let photo = SampleDocuments.photo(of: SampleDocuments.invoice)
-        let quad = DocumentDetector.detectQuad(in: photo) ?? .full
+        let quad = try XCTUnwrap(DocumentDetector.detectQuad(in: photo), DocumentDetector.diagnostics(for: photo))
 
         for (index, filter) in ImageFilter.allCases.enumerated() {
             let rendered = ImageFilterService.render(photo, edit: PageEdit(quad: quad, filter: filter))

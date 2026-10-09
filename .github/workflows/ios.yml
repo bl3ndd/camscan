@@ -23,6 +23,8 @@ concurrency:
 jobs:
   build-and-test:
     runs-on: macos-26
+    permissions:
+      contents: write   # publishes screenshots to the ci-screenshots branch
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
@@ -102,6 +104,27 @@ jobs:
           PY
           done
           ls -la screenshots
+
+      # Artifacts are zip downloads; a branch makes the images viewable on GitHub
+      # and fetchable with git. Force-pushed each run, so it holds only the latest set.
+      - name: Publish screenshots to ci-screenshots branch
+        if: always() && github.event_name == 'push'
+        env:
+          TOKEN: ${{ github.token }}
+        run: |
+          ls screenshots/*.png >/dev/null 2>&1 || exit 0
+          mkdir -p publish
+          for f in screenshots/*.png; do
+            name=$(basename "$f" .png | tr ' &' '__')
+            sips -Z 900 -s format jpeg -s formatOptions 70 "$f" --out "publish/$name.jpg" >/dev/null
+          done
+          cd publish
+          echo "Screenshots for $GITHUB_SHA ($GITHUB_REF_NAME)" > README.md
+          git init -q -b ci-screenshots
+          git add -A
+          git -c user.name="github-actions" -c user.email="github-actions@users.noreply.github.com" \
+            commit -qm "Screenshots for $GITHUB_SHA"
+          git push -fq "https://x-access-token:${TOKEN}@github.com/${GITHUB_REPOSITORY}.git" ci-screenshots
 
       - name: Upload screenshots
         if: always()
