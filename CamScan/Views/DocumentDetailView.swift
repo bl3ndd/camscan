@@ -37,12 +37,14 @@ struct DocumentDetailView: View {
                         Image(uiImage: image)
                             .resizable()
                             .scaledToFit()
+                            .shadow(color: .black.opacity(0.18), radius: 6, y: 2)
                             .padding()
                             .tag(index)
                     }
                 }
             }
             .tabViewStyle(.page(indexDisplayMode: .automatic))
+            .background(Color(.secondarySystemBackground))
 
             if sortedPages.count > 1 {
                 Text("Page \(selectedPageIndex + 1) of \(sortedPages.count)")

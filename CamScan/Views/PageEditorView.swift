@@ -39,7 +39,7 @@ struct PageEditorView: View {
 
                 controls
             }
-            .navigationTitle("Edit Page")
+            .navigationTitle("Edit")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {

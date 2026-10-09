@@ -283,6 +283,16 @@
         }
       }
     },
+    "Edit": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Правка"
+          }
+        }
+      }
+    },
     "Edit Page": {
       "localizations": {
         "ru": {
@@ -1033,6 +1043,16 @@
         }
       }
     },
+    "Search documents & text": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Поиск по документам и тексту"
+          }
+        }
+      }
+    },
     "Security": {
       "localizations": {
         "ru": {
@@ -1159,6 +1179,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "Разблокировать"
+          }
+        }
+      }
+    },
+    "Unlock Pro": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Открыть Pro"
+          }
+        }
+      }
+    },
+    "Unlock Pro — %@": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Открыть Pro — %@"
           }
         }
       }

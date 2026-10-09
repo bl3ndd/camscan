@@ -113,10 +113,23 @@ nonisolated enum DocumentDetector {
         return abs(sum) / 2
     }
 
+    /// Pulls detected corners slightly towards the centre, so no sliver of the desk
+    /// survives at the page edge after perspective correction.
+    static let edgeInset: CGFloat = 0.006
+
     private static func quad(from observation: VNRectangleObservation) -> Quad {
+        let corners = [observation.topLeft, observation.topRight, observation.bottomRight, observation.bottomLeft]
+        let center = CGPoint(
+            x: corners.map(\.x).reduce(0, +) / 4,
+            y: corners.map(\.y).reduce(0, +) / 4
+        )
         // Vision has a bottom-left origin.
         func flipped(_ point: CGPoint) -> CGPoint {
-            CGPoint(x: point.x, y: 1 - point.y)
+            let inset = CGPoint(
+                x: point.x + (center.x - point.x) * edgeInset * 2,
+                y: point.y + (center.y - point.y) * edgeInset * 2
+            )
+            return CGPoint(x: inset.x, y: 1 - inset.y)
         }
         return Quad(
             topLeft: flipped(observation.topLeft),

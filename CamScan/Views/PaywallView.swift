@@ -76,11 +76,12 @@ struct PaywallView: View {
         }
     }
 
+    /// The price comes from the App Store in the user's currency; without it, no price is shown.
     private var priceText: String {
         if let product = store.proProduct {
-            return "Unlock Pro — \(product.displayPrice)"
+            return String(localized: "Unlock Pro — \(product.displayPrice)")
         }
-        return "Unlock Pro — $4.99"
+        return String(localized: "Unlock Pro")
     }
 
     private func featureRow(_ text: LocalizedStringKey, icon: String) -> some View {
