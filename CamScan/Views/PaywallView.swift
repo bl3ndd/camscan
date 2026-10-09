@@ -13,7 +13,7 @@ struct PaywallView: View {
 
                 Image(systemName: "doc.viewfinder.fill")
                     .font(.system(size: 64))
-                    .foregroundStyle(.blue)
+                    .foregroundStyle(.tint)
 
                 Text("CamScan Pro")
                     .font(.largeTitle.bold())
@@ -50,7 +50,7 @@ struct PaywallView: View {
                         }
                         .frame(maxWidth: .infinity)
                         .padding()
-                        .background(.blue)
+                        .background(Color.accentColor)
                         .foregroundStyle(.white)
                         .clipShape(RoundedRectangle(cornerRadius: 14))
                     }
@@ -88,7 +88,7 @@ struct PaywallView: View {
         HStack(spacing: 12) {
             Image(systemName: icon)
                 .frame(width: 28)
-                .foregroundStyle(.blue)
+                .foregroundStyle(.tint)
             Text(text)
                 .font(.body)
         }

@@ -20,26 +20,30 @@ struct FolderView: View {
                     Text("Long-press a document and choose Move to Folder.")
                 }
             } else {
-                List {
-                    ForEach(documents) { document in
-                        NavigationLink(value: document) {
-                            DocumentRow(document: document)
-                        }
-                        .contextMenu {
-                            Button {
-                                document.folder = nil
-                            } label: {
-                                Label("Remove from Folder", systemImage: "folder.badge.minus")
+                ScrollView {
+                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 150), spacing: 16)], spacing: 20) {
+                        ForEach(documents) { document in
+                            NavigationLink(value: document) {
+                                DocumentCard(document: document, selection: nil)
+                            }
+                            .buttonStyle(.plain)
+                            .contextMenu {
+                                Button {
+                                    document.folder = nil
+                                } label: {
+                                    Label("Remove from Folder", systemImage: "folder.badge.minus")
+                                }
+                                Button(role: .destructive) {
+                                    modelContext.delete(document)
+                                } label: {
+                                    Label("Delete", systemImage: "trash")
+                                }
                             }
                         }
                     }
-                    .onDelete { offsets in
-                        let docs = documents
-                        for index in offsets {
-                            modelContext.delete(docs[index])
-                        }
-                    }
+                    .padding()
                 }
+                .background(Color(.systemGroupedBackground))
             }
         }
         .navigationTitle(folder.name)

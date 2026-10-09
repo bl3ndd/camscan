@@ -10,7 +10,7 @@ struct OnboardingView: View {
 
             Image(systemName: "doc.viewfinder.fill")
                 .font(.system(size: 64))
-                .foregroundStyle(.blue)
+                .foregroundStyle(.tint)
 
             Text("Welcome to CamScan")
                 .font(.largeTitle.bold())
@@ -44,7 +44,7 @@ struct OnboardingView: View {
         HStack(alignment: .top, spacing: 16) {
             Image(systemName: icon)
                 .font(.title2)
-                .foregroundStyle(.blue)
+                .foregroundStyle(.tint)
                 .frame(width: 32)
             VStack(alignment: .leading, spacing: 4) {
                 Text(title)

@@ -25,20 +25,27 @@ final class ScreenshotTests: XCTestCase {
             let app = launch(language, seenOnboarding: true)
 
             // Seeding runs the real import pipeline, so give it time.
-            let firstDocument = app.cells.firstMatch
+            let firstDocument = app.buttons.matching(identifier: "documentCard").firstMatch
             XCTAssertTrue(firstDocument.waitForExistence(timeout: 60), "No documents in the list")
             snapshot("\(language.code)-02-documents")
 
             firstDocument.tap()
-            XCTAssertTrue(app.buttons["documentMenu"].waitForExistence(timeout: 10))
+            XCTAssertTrue(app.buttons["editPage"].waitForExistence(timeout: 10))
             snapshot("\(language.code)-03-document")
 
-            app.buttons["documentMenu"].tap()
-            snapshot("\(language.code)-04-menu")
+            if tapIfExists(app.buttons["shareMenu"]) {
+                snapshot("\(language.code)-04-share")
+                app.buttons["shareMenu"].tap() // close the menu
+            }
+
+            if tapIfExists(app.buttons["documentMenu"]) {
+                snapshot("\(language.code)-04b-more")
+                app.buttons["documentMenu"].tap()
+            }
 
             if tapIfExists(app.buttons["editPage"]) {
                 XCTAssertTrue(app.buttons["cropTool"].waitForExistence(timeout: 10))
-                sleep(2) // preview render
+                sleep(3) // preview and filter thumbnails render
                 snapshot("\(language.code)-05-editor")
 
                 if tapIfExists(app.buttons["filter-B&W"]) {
@@ -52,8 +59,6 @@ final class ScreenshotTests: XCTestCase {
                     app.navigationBars.buttons.firstMatch.tap() // Cancel
                 }
                 app.navigationBars.buttons.firstMatch.tap() // Cancel editor
-            } else {
-                app.tap() // close the menu
             }
 
             app.navigationBars.buttons.firstMatch.tap() // Back to the list

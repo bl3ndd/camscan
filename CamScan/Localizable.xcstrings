@@ -11,6 +11,58 @@
         }
       }
     },
+    "%lld documents": {
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld document"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld documents"
+                }
+              }
+            }
+          }
+        },
+        "ru": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld документ"
+                }
+              },
+              "few": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld документа"
+                }
+              },
+              "many": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld документов"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld документа"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "%lld pages": {
       "localizations": {
         "en": {
@@ -69,6 +121,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "A4"
+          }
+        }
+      }
+    },
+    "Add": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Добавить"
           }
         }
       }
@@ -173,6 +235,26 @@
         }
       }
     },
+    "Copied": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Скопировано"
+          }
+        }
+      }
+    },
+    "Copy": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Копировать"
+          }
+        }
+      }
+    },
     "Copy Text": {
       "localizations": {
         "ru": {
@@ -219,6 +301,36 @@
           "stringUnit": {
             "state": "translated",
             "value": "Обрезка"
+          }
+        }
+      }
+    },
+    "Delete": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Удалить"
+          }
+        }
+      }
+    },
+    "Delete Folder": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Удалить папку"
+          }
+        }
+      }
+    },
+    "Documents": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Документы"
           }
         }
       }
@@ -423,6 +535,16 @@
         }
       }
     },
+    "Files": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Файлы"
+          }
+        }
+      }
+    },
     "Fit to Image": {
       "localizations": {
         "ru": {
@@ -439,6 +561,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Папки"
+          }
+        }
+      }
+    },
+    "Folders hold the rest of your documents.": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Остальные документы — в папках."
           }
         }
       }
@@ -489,6 +621,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Высокий"
+          }
+        }
+      }
+    },
+    "Images (JPEG)": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Картинки (JPEG)"
           }
         }
       }
@@ -603,6 +745,16 @@
         }
       }
     },
+    "More": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ещё"
+          }
+        }
+      }
+    },
     "Move to Folder": {
       "localizations": {
         "ru": {
@@ -683,6 +835,16 @@
         }
       }
     },
+    "No documents yet": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Пока нет документов"
+          }
+        }
+      }
+    },
     "No subscriptions": {
       "localizations": {
         "ru": {
@@ -699,6 +861,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "Таблицы не найдены"
+          }
+        }
+      }
+    },
+    "No text found": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Текст не найден"
+          }
+        }
+      }
+    },
+    "Nothing found": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ничего не найдено"
           }
         }
       }
@@ -773,6 +955,16 @@
         }
       }
     },
+    "PDF with Password": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "PDF с паролем"
+          }
+        }
+      }
+    },
     "Page %lld": {
       "localizations": {
         "ru": {
@@ -833,6 +1025,16 @@
         }
       }
     },
+    "Photos": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Фото"
+          }
+        }
+      }
+    },
     "Place Signature": {
       "localizations": {
         "ru": {
@@ -849,6 +1051,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Готовим PDF…"
+          }
+        }
+      }
+    },
+    "Preparing…": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Готовим…"
           }
         }
       }
@@ -904,6 +1116,16 @@
       }
     },
     "Recognizing text...": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Распознаём текст…"
+          }
+        }
+      }
+    },
+    "Recognizing text…": {
       "localizations": {
         "ru": {
           "stringUnit": {
@@ -1003,6 +1225,16 @@
         }
       }
     },
+    "Scan": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Сканировать"
+          }
+        }
+      }
+    },
     "Scan %@": {
       "localizations": {
         "ru": {
@@ -1019,6 +1251,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Сканировать документ"
+          }
+        }
+      }
+    },
+    "Scan a document with the camera, or import a photo or PDF.": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Отсканируйте документ камерой или импортируйте фото либо PDF."
           }
         }
       }
@@ -1073,12 +1315,32 @@
         }
       }
     },
+    "Select to Merge": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Выбрать для объединения"
+          }
+        }
+      }
+    },
     "Settings": {
       "localizations": {
         "ru": {
           "stringUnit": {
             "state": "translated",
             "value": "Настройки"
+          }
+        }
+      }
+    },
+    "Share": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Поделиться"
           }
         }
       }
@@ -1133,12 +1395,52 @@
         }
       }
     },
+    "Tables (CSV)": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Таблицы (CSV)"
+          }
+        }
+      }
+    },
     "Tap the scan button to scan your first document": {
       "localizations": {
         "ru": {
           "stringUnit": {
             "state": "translated",
             "value": "Нажмите кнопку сканирования, чтобы отсканировать первый документ"
+          }
+        }
+      }
+    },
+    "Text": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Текст"
+          }
+        }
+      }
+    },
+    "Text (TXT)": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Текст (TXT)"
+          }
+        }
+      }
+    },
+    "Text from All Pages": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Текст со всех страниц"
           }
         }
       }

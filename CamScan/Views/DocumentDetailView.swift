@@ -24,183 +24,57 @@ struct DocumentDetailView: View {
     @State private var showPasswordPrompt = false
     @State private var exportPassword = ""
     @State private var showNoTablesAlert = false
+    @State private var showTextSheet = false
 
     private var sortedPages: [ScannedPage] {
         document.pages.sorted { $0.index < $1.index }
     }
 
     var body: some View {
-        VStack(spacing: 0) {
-            TabView(selection: $selectedPageIndex) {
-                ForEach(Array(sortedPages.enumerated()), id: \.element.id) { index, page in
-                    if let image = page.image {
-                        Image(uiImage: image)
-                            .resizable()
-                            .scaledToFit()
-                            .shadow(color: .black.opacity(0.18), radius: 6, y: 2)
-                            .padding()
-                            .tag(index)
-                    }
+        TabView(selection: $selectedPageIndex) {
+            ForEach(Array(sortedPages.enumerated()), id: \.element.id) { index, page in
+                if let image = page.image {
+                    Image(uiImage: image)
+                        .resizable()
+                        .scaledToFit()
+                        .shadow(color: .black.opacity(0.15), radius: 8, y: 3)
+                        .padding(.horizontal, 20)
+                        .padding(.vertical, 16)
+                        .tag(index)
                 }
             }
-            .tabViewStyle(.page(indexDisplayMode: .automatic))
-            .background(Color(.secondarySystemBackground))
-
+        }
+        .tabViewStyle(.page(indexDisplayMode: .never))
+        .background(Color(.secondarySystemBackground))
+        .overlay(alignment: .bottom) {
             if sortedPages.count > 1 {
-                Text("Page \(selectedPageIndex + 1) of \(sortedPages.count)")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .padding(.bottom, 8)
+                Text("\(selectedPageIndex + 1) / \(sortedPages.count)")
+                    .font(.footnote.monospacedDigit().weight(.medium))
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+                    .background(.ultraThinMaterial, in: Capsule())
+                    .padding(.bottom, 12)
             }
-
-            if isRecognizing {
-                ProgressView("Recognizing text...")
-                    .padding()
-            }
-
+        }
+        .overlay {
             if isExporting {
-                ProgressView("Preparing PDF...")
-                    .padding()
+                ProgressView("Preparing…")
+                    .padding(20)
+                    .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 14))
             }
-
-            if let text = recognizedText, !text.isEmpty {
-                ScrollView {
-                    Text(text)
-                        .font(.body)
-                        .textSelection(.enabled)
-                        .padding()
-                }
-                .frame(maxHeight: 200)
-                .background(.ultraThinMaterial)
-            }
+        }
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            actionBar
         }
         .navigationTitle(document.title)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
-            ToolbarItemGroup(placement: .primaryAction) {
-                Menu {
-                    Button {
-                        newTitle = document.title
-                        showRenameAlert = true
-                    } label: {
-                        Label("Rename", systemImage: "pencil")
-                    }
-
-                    Button {
-                        showEditor = true
-                    } label: {
-                        Label("Edit Page", systemImage: "crop")
-                    }
-                    .accessibilityIdentifier("editPage")
-
-                    Button {
-                        showPages = true
-                    } label: {
-                        Label("Manage Pages", systemImage: "rectangle.stack")
-                    }
-
-                    Divider()
-
-                    Button {
-                        startSigning()
-                    } label: {
-                        Label("Sign", systemImage: "signature")
-                    }
-
-                    Button {
-                        startDrawing()
-                    } label: {
-                        Label("Draw & Highlight", systemImage: "pencil.tip.crop.circle")
-                    }
-
-                    Divider()
-
-                    Button {
-                        recognizeCurrentPage()
-                    } label: {
-                        Label("OCR — Current Page", systemImage: "text.viewfinder")
-                    }
-                    .disabled(isRecognizing)
-
-                    Button {
-                        recognizeAllPages()
-                    } label: {
-                        Label("OCR — All Pages", systemImage: "text.page.fill")
-                    }
-                    .disabled(isRecognizing)
-
-                    Divider()
-
-                    Button {
-                        exportPDF()
-                    } label: {
-                        Label("Export PDF", systemImage: "arrow.up.doc")
-                    }
-                    .disabled(isExporting)
-
-                    Button {
-                        if store.isPurchased {
-                            exportPassword = ""
-                            showPasswordPrompt = true
-                        } else {
-                            showPaywall = true
-                        }
-                    } label: {
-                        Label("Export PDF with Password", systemImage: "lock.doc")
-                    }
-                    .disabled(isExporting)
-
-                    Button {
-                        exportTables()
-                    } label: {
-                        Label("Export Tables (CSV)", systemImage: "tablecells")
-                    }
-                    .disabled(isExporting)
-
-                    Button {
-                        exportImages()
-                    } label: {
-                        Label("Export Images (JPEG)", systemImage: "photo.on.rectangle")
-                    }
-                    .disabled(isExporting)
-
-                    Button {
-                        exportText()
-                    } label: {
-                        Label("Export Text (TXT)", systemImage: "doc.plaintext")
-                    }
-                    .disabled(isExporting)
-
-                    Picker(selection: $quality) {
-                        ForEach(PDFQuality.allCases) { quality in
-                            Text(quality.title).tag(quality)
-                        }
-                    } label: {
-                        Label("PDF Quality", systemImage: "arrow.down.right.and.arrow.up.left")
-                    }
-                    .pickerStyle(.menu)
-
-                    Picker(selection: $pageSize) {
-                        ForEach(PDFPageSize.allCases) { size in
-                            Text(size.title).tag(size)
-                        }
-                    } label: {
-                        Label("Page Size", systemImage: "doc.richtext")
-                    }
-                    .pickerStyle(.menu)
-
-                    if let text = recognizedText, !text.isEmpty {
-                        Button {
-                            UIPasteboard.general.string = text
-                        } label: {
-                            Label("Copy Text", systemImage: "doc.on.doc")
-                        }
-                    }
-                } label: {
-                    Image(systemName: "ellipsis.circle")
-                }
-                .accessibilityIdentifier("documentMenu")
+            ToolbarItem(placement: .primaryAction) {
+                moreMenu
             }
+        }
+        .sheet(isPresented: $showTextSheet) {
+            RecognizedTextView(text: recognizedText, isRecognizing: isRecognizing)
         }
         .alert("Protect PDF", isPresented: $showPasswordPrompt) {
             SecureField("Password", text: $exportPassword)
@@ -269,6 +143,149 @@ struct DocumentDetailView: View {
         .onChange(of: selectedPageIndex) {
             // Show cached OCR if available
             recognizedText = sortedPages[safe: selectedPageIndex]?.recognizedText
+        }
+    }
+
+    // MARK: - Actions
+
+    /// The four things people do with a scan, labelled, always at hand.
+    private var actionBar: some View {
+        HStack(spacing: 0) {
+            actionButton("Edit", icon: "crop") { showEditor = true }
+                .accessibilityIdentifier("editPage")
+            actionButton("Sign", icon: "signature") { startSigning() }
+                .accessibilityIdentifier("signButton")
+            actionButton("Text", icon: "text.viewfinder") { showText() }
+                .accessibilityIdentifier("textButton")
+            shareMenu
+        }
+        .padding(.top, 8)
+        .padding(.bottom, 4)
+        .background(.bar)
+        .overlay(alignment: .top) { Divider() }
+    }
+
+    private func actionButton(_ title: LocalizedStringKey, icon: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            actionLabel(title, icon: icon)
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func actionLabel(_ title: LocalizedStringKey, icon: String) -> some View {
+        VStack(spacing: 4) {
+            Image(systemName: icon)
+                .font(.title3)
+                .frame(height: 26)
+            Text(title)
+                .font(.caption)
+        }
+        .foregroundStyle(.tint)
+        .frame(maxWidth: .infinity)
+        .contentShape(Rectangle())
+    }
+
+    private var shareMenu: some View {
+        Menu {
+            Button {
+                exportPDF()
+            } label: {
+                Label("PDF", systemImage: "doc.richtext")
+            }
+            Button {
+                if store.isPurchased {
+                    exportPassword = ""
+                    showPasswordPrompt = true
+                } else {
+                    showPaywall = true
+                }
+            } label: {
+                Label("PDF with Password", systemImage: "lock.doc")
+            }
+            Button {
+                exportImages()
+            } label: {
+                Label("Images (JPEG)", systemImage: "photo.on.rectangle")
+            }
+            Button {
+                exportText()
+            } label: {
+                Label("Text (TXT)", systemImage: "doc.plaintext")
+            }
+            Button {
+                exportTables()
+            } label: {
+                Label("Tables (CSV)", systemImage: "tablecells")
+            }
+
+            Divider()
+
+            Picker(selection: $pageSize) {
+                ForEach(PDFPageSize.allCases) { size in
+                    Text(size.title).tag(size)
+                }
+            } label: {
+                Label("Page Size", systemImage: "doc")
+            }
+            .pickerStyle(.menu)
+
+            Picker(selection: $quality) {
+                ForEach(PDFQuality.allCases) { quality in
+                    Text(quality.title).tag(quality)
+                }
+            } label: {
+                Label("PDF Quality", systemImage: "arrow.down.right.and.arrow.up.left")
+            }
+            .pickerStyle(.menu)
+        } label: {
+            actionLabel("Share", icon: "square.and.arrow.up")
+        }
+        .disabled(isExporting)
+        .accessibilityIdentifier("shareMenu")
+    }
+
+    /// Less frequent actions.
+    private var moreMenu: some View {
+        Menu {
+            Button {
+                newTitle = document.title
+                showRenameAlert = true
+            } label: {
+                Label("Rename", systemImage: "pencil")
+            }
+            Button {
+                showPages = true
+            } label: {
+                Label("Pages", systemImage: "rectangle.stack")
+            }
+            Button {
+                startDrawing()
+            } label: {
+                Label("Draw & Highlight", systemImage: "pencil.tip.crop.circle")
+            }
+            if sortedPages.count > 1 {
+                Button {
+                    showTextSheet = true
+                    recognizeAllPages()
+                } label: {
+                    Label("Text from All Pages", systemImage: "doc.text")
+                }
+                .disabled(isRecognizing)
+            }
+        } label: {
+            Image(systemName: "ellipsis")
+        }
+        .accessibilityLabel("More")
+        .accessibilityIdentifier("documentMenu")
+    }
+
+    /// Shows the page's text, recognizing it first if needed.
+    private func showText() {
+        showTextSheet = true
+        if let cached = sortedPages[safe: selectedPageIndex]?.recognizedText {
+            recognizedText = cached
+        } else {
+            recognizeCurrentPage()
         }
     }
 
@@ -506,6 +523,53 @@ struct DocumentDetailView: View {
                 print("Failed to write CSV: \(error)")
             }
         }
+    }
+}
+
+/// Recognized text with copy and share.
+struct RecognizedTextView: View {
+    let text: String?
+    let isRecognizing: Bool
+    @Environment(\.dismiss) private var dismiss
+    @State private var copied = false
+
+    var body: some View {
+        NavigationStack {
+            Group {
+                if isRecognizing {
+                    ProgressView("Recognizing text…")
+                } else if let text, !text.isEmpty {
+                    ScrollView {
+                        Text(text)
+                            .textSelection(.enabled)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding()
+                    }
+                } else {
+                    ContentUnavailableView("No text found", systemImage: "text.magnifyingglass")
+                }
+            }
+            .navigationTitle("Text")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Done") { dismiss() }
+                }
+                if let text, !text.isEmpty, !isRecognizing {
+                    ToolbarItemGroup(placement: .bottomBar) {
+                        Button {
+                            UIPasteboard.general.string = text
+                            copied = true
+                        } label: {
+                            Label(copied ? "Copied" : "Copy", systemImage: copied ? "checkmark" : "doc.on.doc")
+                        }
+                        Spacer()
+                        ShareLink(item: text)
+                    }
+                }
+            }
+        }
+        .presentationDetents([.medium, .large])
     }
 }
 

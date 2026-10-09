@@ -20,7 +20,7 @@ struct DocumentListView: View {
     @State private var photoItems: [PhotosPickerItem] = []
     @State private var isImporting = false
     @State private var showFileImporter = false
-    @State private var editMode: EditMode = .inactive
+    @State private var isSelecting = false
     @State private var selection = Set<PersistentIdentifier>()
 
     private var filteredDocuments: [ScannedDocument] {
@@ -32,90 +32,28 @@ struct DocumentListView: View {
         }
     }
 
+    private let columns = [GridItem(.adaptive(minimum: 150), spacing: 16)]
+
     var body: some View {
         NavigationStack {
             Group {
                 if documents.isEmpty && folders.isEmpty {
                     emptyState
                 } else {
-                    documentList
+                    content
                 }
             }
-            .navigationTitle("CamScan")
-            .searchable(text: $searchText, prompt: "Search documents & text")
-            .toolbar {
-                ToolbarItem(placement: .primaryAction) {
-                    Menu {
-                        Button {
-                            startScan()
-                        } label: {
-                            Label("Scan with Camera", systemImage: "camera")
-                        }
-                        Button {
-                            startImport()
-                        } label: {
-                            Label("Import from Photos", systemImage: "photo.on.rectangle")
-                        }
-                        Button {
-                            showFileImporter = true
-                        } label: {
-                            Label("Import from Files", systemImage: "folder")
-                        }
-                        Divider()
-                        Button {
-                            newFolderName = ""
-                            showNewFolder = true
-                        } label: {
-                            Label("New Folder", systemImage: "folder.badge.plus")
-                        }
-                    } label: {
-                        Image(systemName: "doc.viewfinder")
-                            .font(.title2)
-                    }
-                    .disabled(isImporting)
-                }
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Button {
-                        showSettings = true
-                    } label: {
-                        Image(systemName: "gearshape")
-                    }
-                    .accessibilityIdentifier("settingsButton")
-                }
-                ToolbarItem(placement: .navigationBarLeading) {
-                    if !documents.isEmpty {
-                        Button(editMode.isEditing ? LocalizedStringKey("Done") : LocalizedStringKey("Select")) {
-                            withAnimation {
-                                editMode = editMode.isEditing ? .inactive : .active
-                                selection.removeAll()
-                            }
-                        }
-                    }
-                }
-                ToolbarItem(placement: .bottomBar) {
-                    if editMode.isEditing {
-                        Button("Merge \(selection.count) Documents") {
-                            mergeSelected()
-                        }
-                        .disabled(selection.count < 2)
-                    }
-                }
-                ToolbarItem(placement: .navigationBarLeading) {
-                    if !store.isPurchased {
-                        Button {
-                            showPaywall = true
-                        } label: {
-                            Text("Pro")
-                                .font(.caption.bold())
-                                .padding(.horizontal, 8)
-                                .padding(.vertical, 4)
-                                .background(.blue)
-                                .foregroundStyle(.white)
-                                .clipShape(Capsule())
-                        }
-                        .accessibilityIdentifier("proButton")
-                    }
-                }
+            .navigationTitle("Documents")
+            .searchable(text: $searchText, placement: .navigationBarDrawer(displayMode: .always), prompt: "Search documents & text")
+            .toolbar { toolbar }
+            .safeAreaInset(edge: .bottom) {
+                bottomBar
+            }
+            .navigationDestination(for: ScannedDocument.self) { document in
+                DocumentDetailView(document: document)
+            }
+            .navigationDestination(for: Folder.self) { folder in
+                FolderView(folder: folder)
             }
             .fullScreenCover(isPresented: $showScanner) {
                 DocumentScannerView(
@@ -168,84 +106,228 @@ struct DocumentListView: View {
         }
     }
 
-    private var emptyState: some View {
-        ContentUnavailableView {
-            Label("No Documents", systemImage: "doc.text.magnifyingglass")
-        } description: {
-            Text("Tap the scan button to scan your first document")
-        } actions: {
-            Button("Scan Document") {
-                startScan()
+    @ToolbarContentBuilder
+    private var toolbar: some ToolbarContent {
+        ToolbarItem(placement: .topBarLeading) {
+            Button {
+                showSettings = true
+            } label: {
+                Image(systemName: "gearshape")
             }
-            .buttonStyle(.borderedProminent)
+            .accessibilityLabel("Settings")
+            .accessibilityIdentifier("settingsButton")
+        }
 
-            Button("Import from Photos") {
-                startImport()
+        if !store.isPurchased {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button {
+                    showPaywall = true
+                } label: {
+                    Text("Pro")
+                        .font(.caption.bold())
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 4)
+                        .background(Color.accentColor, in: Capsule())
+                        .foregroundStyle(.white)
+                }
+                .accessibilityIdentifier("proButton")
             }
+        }
 
-            Button("Import from Files") {
-                showFileImporter = true
+        ToolbarItem(placement: .topBarTrailing) {
+            if isSelecting {
+                Button("Done") {
+                    withAnimation {
+                        isSelecting = false
+                        selection.removeAll()
+                    }
+                }
+                .fontWeight(.semibold)
+            } else {
+                Menu {
+                    Button {
+                        startImport()
+                    } label: {
+                        Label("Import from Photos", systemImage: "photo.on.rectangle")
+                    }
+                    Button {
+                        showFileImporter = true
+                    } label: {
+                        Label("Import from Files", systemImage: "folder")
+                    }
+                    Divider()
+                    Button {
+                        newFolderName = ""
+                        showNewFolder = true
+                    } label: {
+                        Label("New Folder", systemImage: "folder.badge.plus")
+                    }
+                    if documents.count > 1 {
+                        Button {
+                            withAnimation {
+                                selection.removeAll()
+                                isSelecting = true
+                            }
+                        } label: {
+                            Label("Select to Merge", systemImage: "checkmark.circle")
+                        }
+                    }
+                } label: {
+                    Image(systemName: "plus")
+                }
+                .accessibilityLabel("Add")
+                .disabled(isImporting)
             }
         }
     }
 
-    private var documentList: some View {
-        List(selection: $selection) {
-            if searchText.isEmpty && !folders.isEmpty {
-                Section("Folders") {
+    /// The scan button is the app's main action, so it is always one tap away at the bottom.
+    @ViewBuilder
+    private var bottomBar: some View {
+        if isSelecting {
+            Button {
+                mergeSelected()
+            } label: {
+                Text("Merge \(selection.count) Documents")
+                    .font(.headline)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 6)
+            }
+            .buttonStyle(.borderedProminent)
+            .disabled(selection.count < 2)
+            .padding(.horizontal)
+            .padding(.bottom, 8)
+        } else {
+            Button {
+                startScan()
+            } label: {
+                Label("Scan", systemImage: "camera.fill")
+                    .font(.headline)
+                    .padding(.horizontal, 32)
+                    .padding(.vertical, 16)
+                    .foregroundStyle(.white)
+                    .background(Color.accentColor, in: Capsule())
+                    .shadow(color: Color.accentColor.opacity(0.35), radius: 12, y: 6)
+            }
+            .buttonStyle(.plain)
+            .accessibilityIdentifier("scanButton")
+            .padding(.bottom, 8)
+        }
+    }
+
+    private var emptyState: some View {
+        ContentUnavailableView {
+            Label("No documents yet", systemImage: "doc.viewfinder")
+        } description: {
+            Text("Scan a document with the camera, or import a photo or PDF.")
+        } actions: {
+            HStack {
+                Button {
+                    startImport()
+                } label: {
+                    Label("Photos", systemImage: "photo.on.rectangle")
+                }
+                Button {
+                    showFileImporter = true
+                } label: {
+                    Label("Files", systemImage: "folder")
+                }
+            }
+            .buttonStyle(.bordered)
+        }
+    }
+
+    private var content: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 24) {
+                if searchText.isEmpty && !folders.isEmpty && !isSelecting {
+                    foldersRow
+                }
+
+                if filteredDocuments.isEmpty {
+                    Text(searchText.isEmpty ? "Folders hold the rest of your documents." : "Nothing found")
+                        .foregroundStyle(.secondary)
+                        .frame(maxWidth: .infinity)
+                        .padding(.top, 40)
+                } else {
+                    LazyVGrid(columns: columns, spacing: 20) {
+                        ForEach(filteredDocuments) { document in
+                            card(for: document)
+                        }
+                    }
+                }
+            }
+            .padding(.horizontal)
+            .padding(.top, 8)
+            .padding(.bottom, 24)
+        }
+        .background(Color(.systemGroupedBackground))
+    }
+
+    private var foldersRow: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Folders")
+                .font(.headline)
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 12) {
                     ForEach(folders) { folder in
                         NavigationLink(value: folder) {
-                            Label {
-                                HStack {
-                                    Text(folder.name)
-                                    Spacer()
-                                    Text("\(folder.documents.count)")
-                                        .foregroundStyle(.secondary)
-                                }
-                            } icon: {
-                                Image(systemName: "folder.fill")
-                            }
+                            FolderChip(folder: folder)
                         }
-                    }
-                    .onDelete { offsets in
-                        for index in offsets {
-                            modelContext.delete(folders[index])
-                        }
-                    }
-                }
-            }
-
-            Section {
-                ForEach(filteredDocuments) { document in
-                    NavigationLink(value: document) {
-                        DocumentRow(document: document)
-                    }
-                    .tag(document.persistentModelID)
-                    .contextMenu {
-                        if !folders.isEmpty {
-                            Menu {
-                                ForEach(folders) { folder in
-                                    Button(folder.name) { document.folder = folder }
-                                }
-                                if document.folder != nil {
-                                    Divider()
-                                    Button("Remove from Folder") { document.folder = nil }
-                                }
+                        .buttonStyle(.plain)
+                        .contextMenu {
+                            Button(role: .destructive) {
+                                modelContext.delete(folder)
                             } label: {
-                                Label("Move to Folder", systemImage: "folder")
+                                Label("Delete Folder", systemImage: "trash")
                             }
                         }
                     }
                 }
-                .onDelete(perform: deleteDocuments)
             }
         }
-        .environment(\.editMode, $editMode)
-        .navigationDestination(for: ScannedDocument.self) { document in
-            DocumentDetailView(document: document)
-        }
-        .navigationDestination(for: Folder.self) { folder in
-            FolderView(folder: folder)
+    }
+
+    @ViewBuilder
+    private func card(for document: ScannedDocument) -> some View {
+        if isSelecting {
+            let isSelected = selection.contains(document.persistentModelID)
+            Button {
+                if isSelected {
+                    selection.remove(document.persistentModelID)
+                } else {
+                    selection.insert(document.persistentModelID)
+                }
+            } label: {
+                DocumentCard(document: document, selection: isSelected)
+            }
+            .buttonStyle(.plain)
+        } else {
+            NavigationLink(value: document) {
+                DocumentCard(document: document, selection: nil)
+            }
+            .buttonStyle(.plain)
+            .accessibilityIdentifier("documentCard")
+            .contextMenu {
+                if !folders.isEmpty {
+                    Menu {
+                        ForEach(folders) { folder in
+                            Button(folder.name) { document.folder = folder }
+                        }
+                        if document.folder != nil {
+                            Divider()
+                            Button("Remove from Folder") { document.folder = nil }
+                        }
+                    } label: {
+                        Label("Move to Folder", systemImage: "folder")
+                    }
+                }
+                Button(role: .destructive) {
+                    modelContext.delete(document)
+                } label: {
+                    Label("Delete", systemImage: "trash")
+                }
+            }
         }
     }
 
@@ -296,8 +378,8 @@ struct DocumentListView: View {
         saveDocument(pages: pages, title: String(localized: "Merged \(formattedDate())"))
 
         withAnimation {
+            isSelecting = false
             selection.removeAll()
-            editMode = .inactive
         }
     }
 
@@ -338,13 +420,6 @@ struct DocumentListView: View {
         modelContext.insert(document)
     }
 
-    private func deleteDocuments(at offsets: IndexSet) {
-        let docs = filteredDocuments
-        for index in offsets {
-            modelContext.delete(docs[index])
-        }
-    }
-
     private func formattedDate() -> String {
         let formatter = DateFormatter()
         formatter.dateStyle = .medium
@@ -353,41 +428,86 @@ struct DocumentListView: View {
     }
 }
 
-struct DocumentRow: View {
+/// A document as a page preview with its title, like a sheet of paper on a desk.
+struct DocumentCard: View {
     let document: ScannedDocument
+    /// `nil` outside of selection mode.
+    var selection: Bool?
 
     var body: some View {
-        HStack(spacing: 12) {
-            if let thumbnail = document.thumbnail {
-                Image(uiImage: thumbnail)
-                    .resizable()
-                    .scaledToFill()
-                    .frame(width: 50, height: 65)
-                    .clipShape(RoundedRectangle(cornerRadius: 6))
-            } else {
-                RoundedRectangle(cornerRadius: 6)
-                    .fill(.quaternary)
-                    .frame(width: 50, height: 65)
-                    .overlay {
+        VStack(alignment: .leading, spacing: 8) {
+            Color(.secondarySystemGroupedBackground)
+                .aspectRatio(3 / 4, contentMode: .fit)
+                .overlay {
+                    if let thumbnail = document.thumbnail {
+                        Image(uiImage: thumbnail)
+                            .resizable()
+                            .scaledToFill()
+                    } else {
                         Image(systemName: "doc")
-                            .foregroundStyle(.secondary)
+                            .font(.largeTitle)
+                            .foregroundStyle(.tertiary)
                     }
-            }
+                }
+                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .overlay {
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .strokeBorder(selection == true ? Color.accentColor : Color.primary.opacity(0.08), lineWidth: selection == true ? 3 : 1)
+                }
+                .shadow(color: .black.opacity(0.08), radius: 6, y: 3)
+                .overlay(alignment: .bottomTrailing) {
+                    if document.pageCount > 1 {
+                        Label("\(document.pageCount)", systemImage: "doc.on.doc")
+                            .font(.caption2.weight(.semibold))
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(.ultraThinMaterial, in: Capsule())
+                            .padding(8)
+                    }
+                }
+                .overlay(alignment: .topTrailing) {
+                    if let selection {
+                        Image(systemName: selection ? "checkmark.circle.fill" : "circle")
+                            .font(.title2)
+                            .foregroundStyle(selection ? Color.accentColor : .white)
+                            .shadow(radius: 2)
+                            .padding(8)
+                    }
+                }
 
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .leading, spacing: 2) {
                 Text(document.title)
-                    .font(.headline)
-                    .lineLimit(1)
-
-                Text("\(document.pageCount) pages")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-
-                Text(document.createdAt, style: .date)
+                    .font(.subheadline.weight(.semibold))
+                    .lineLimit(2)
+                (Text("\(document.pageCount) pages") + Text(" · ") + Text(document.createdAt, format: .dateTime.day().month(.abbreviated)))
                     .font(.caption)
-                    .foregroundStyle(.tertiary)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
             }
         }
-        .padding(.vertical, 4)
+        .contentShape(Rectangle())
+    }
+}
+
+struct FolderChip: View {
+    let folder: Folder
+
+    var body: some View {
+        HStack(spacing: 10) {
+            Image(systemName: "folder.fill")
+                .font(.title3)
+                .foregroundStyle(.tint)
+            VStack(alignment: .leading, spacing: 0) {
+                Text(folder.name)
+                    .font(.subheadline.weight(.semibold))
+                    .lineLimit(1)
+                Text("\(folder.documents.count) documents")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
+        .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
     }
 }

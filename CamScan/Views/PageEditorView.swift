@@ -11,6 +11,8 @@ struct PageEditorView: View {
     @State private var previewTask: Task<Void, Never>?
     @State private var showCrop = false
     @State private var isSaving = false
+    /// Small renders of the page with each filter, so the choice is visual.
+    @State private var thumbnails: [ImageFilter: UIImage] = [:]
 
     /// Downscaled copy for fast previews; the final render uses `source`.
     private let previewSource: UIImage
@@ -30,12 +32,14 @@ struct PageEditorView: View {
                         Image(uiImage: preview)
                             .resizable()
                             .scaledToFit()
+                            .shadow(color: .black.opacity(0.15), radius: 8, y: 3)
                     } else {
                         ProgressView()
                     }
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .padding()
+                .background(Color(.secondarySystemBackground))
 
                 controls
             }
@@ -59,6 +63,7 @@ struct PageEditorView: View {
                 }
             }
             .onAppear { updatePreview(debounce: false) }
+            .task(id: ThumbnailKey(quad: edit.quad, rotation: edit.rotation)) { await updateThumbnails() }
             .onChange(of: edit) { updatePreview(debounce: true) }
         }
     }
@@ -113,18 +118,27 @@ struct PageEditorView: View {
             edit.filter = filter
         } label: {
             VStack(spacing: 6) {
-                Image(systemName: filter.icon)
-                    .font(.title2)
-                    .frame(width: 56, height: 56)
-                    .background(edit.filter == filter ? Color.blue.opacity(0.2) : Color.secondary.opacity(0.1))
-                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                Color(.secondarySystemBackground)
+                    .frame(width: 56, height: 72)
+                    .overlay {
+                        if let thumbnail = thumbnails[filter] {
+                            Image(uiImage: thumbnail)
+                                .resizable()
+                                .scaledToFill()
+                        } else {
+                            Image(systemName: filter.icon)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                    .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
                     .overlay(
-                        RoundedRectangle(cornerRadius: 10)
-                            .stroke(edit.filter == filter ? .blue : .clear, lineWidth: 2)
+                        RoundedRectangle(cornerRadius: 8, style: .continuous)
+                            .strokeBorder(edit.filter == filter ? Color.accentColor : Color.primary.opacity(0.1), lineWidth: edit.filter == filter ? 3 : 1)
                     )
 
                 Text(filter.title)
-                    .font(.caption2)
+                    .font(.caption2.weight(edit.filter == filter ? .semibold : .regular))
+                    .foregroundStyle(edit.filter == filter ? Color.accentColor : .primary)
                     .lineLimit(1)
             }
         }
@@ -140,6 +154,28 @@ struct PageEditorView: View {
             Slider(value: value, in: range)
         }
         .padding(.horizontal)
+    }
+
+    /// Re-rendered only when the crop or rotation changes; tone sliders don't affect the choice of filter.
+    private func updateThumbnails() async {
+        let base: PageEdit = {
+            var base = PageEdit()
+            base.quad = edit.quad
+            base.rotation = edit.rotation
+            return base
+        }()
+        let small = previewSource.upright(maxDimension: 240)
+        let rendered = await Task.detached(priority: .utility) {
+            var result: [ImageFilter: UIImage] = [:]
+            for filter in ImageFilter.allCases {
+                var edit = base
+                edit.filter = filter
+                result[filter] = ImageFilterService.render(small, edit: edit)
+            }
+            return result
+        }.value
+        guard !Task.isCancelled else { return }
+        thumbnails = rendered
     }
 
     /// Cancels the previous render so a slow result never overwrites a newer one.
@@ -173,4 +209,9 @@ struct PageEditorView: View {
             dismiss()
         }
     }
+}
+
+private struct ThumbnailKey: Equatable {
+    let quad: Quad
+    let rotation: Int
 }
