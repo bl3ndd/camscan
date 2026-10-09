@@ -20,6 +20,9 @@ struct DocumentDetailView: View {
     @State private var newSignature: UIImage?
     @State private var signatureRequest: SignatureRequest?
     @State private var annotationRequest: AnnotationRequest?
+    @State private var showPasswordPrompt = false
+    @State private var exportPassword = ""
+    @State private var showNoTablesAlert = false
 
     private var sortedPages: [ScannedPage] {
         document.pages.sorted { $0.index < $1.index }
@@ -131,6 +134,25 @@ struct DocumentDetailView: View {
                     }
                     .disabled(isExporting)
 
+                    Button {
+                        if store.isPurchased {
+                            exportPassword = ""
+                            showPasswordPrompt = true
+                        } else {
+                            showPaywall = true
+                        }
+                    } label: {
+                        Label("Export PDF with Password", systemImage: "lock.doc")
+                    }
+                    .disabled(isExporting)
+
+                    Button {
+                        exportTables()
+                    } label: {
+                        Label("Export Tables (CSV)", systemImage: "tablecells")
+                    }
+                    .disabled(isExporting)
+
                     Picker(selection: $pageSize) {
                         ForEach(PDFPageSize.allCases) { size in
                             Text(size.title).tag(size)
@@ -151,6 +173,21 @@ struct DocumentDetailView: View {
                     Image(systemName: "ellipsis.circle")
                 }
             }
+        }
+        .alert("Protect PDF", isPresented: $showPasswordPrompt) {
+            SecureField("Password", text: $exportPassword)
+            Button("Cancel", role: .cancel) {}
+            Button("Export") {
+                exportPDF(password: exportPassword)
+            }
+            .disabled(exportPassword.isEmpty)
+        } message: {
+            Text("The PDF will ask for this password when opened.")
+        }
+        .alert("No tables found", isPresented: $showNoTablesAlert) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text("Couldn't find a table on these pages.")
         }
         .alert("Rename Document", isPresented: $showRenameAlert) {
             TextField("Title", text: $newTitle)
@@ -321,7 +358,7 @@ struct DocumentDetailView: View {
     }
 
     /// Exports a searchable PDF: pages not recognized yet are run through OCR first.
-    private func exportPDF() {
+    private func exportPDF(password: String? = nil) {
         isExporting = true
         let pages = sortedPages
 
@@ -343,6 +380,9 @@ struct DocumentDetailView: View {
             let url = await Task.detached(priority: .userInitiated) { () -> URL? in
                 let data = PDFService.generatePDF(from: pageContents, pageSize: pageSize)
                 let url = FileManager.default.temporaryDirectory.appendingPathComponent(fileName)
+                if let password {
+                    return PDFService.encrypt(data, password: password, to: url) ? url : nil
+                }
                 do {
                     try data.write(to: url)
                     return url
@@ -356,6 +396,40 @@ struct DocumentDetailView: View {
             if let url {
                 pdfURL = url
                 showShareSheet = true
+            }
+        }
+    }
+
+    /// Finds tables on every page and shares them as one CSV (Pro).
+    private func exportTables() {
+        guard store.isPurchased else {
+            showPaywall = true
+            return
+        }
+        isExporting = true
+        let pagesData = sortedPages.map(\.imageData)
+        let fileName = PDFService.fileName(for: document.title, extension: "csv")
+
+        Task {
+            var tables: [[[String]]] = []
+            for data in pagesData {
+                if let found = try? await TableExportService.tables(in: data) {
+                    tables += found
+                }
+            }
+
+            isExporting = false
+            guard !tables.isEmpty else {
+                showNoTablesAlert = true
+                return
+            }
+            let url = FileManager.default.temporaryDirectory.appendingPathComponent(fileName)
+            do {
+                try TableExportService.csv(tables).write(to: url, atomically: true, encoding: .utf8)
+                pdfURL = url
+                showShareSheet = true
+            } catch {
+                print("Failed to write CSV: \(error)")
             }
         }
     }

@@ -34,6 +34,17 @@ final class ScannedPage {
         self.recognizedText = nil
     }
 
+    /// A copy for another document (merge, split).
+    init(index: Int, copying other: ScannedPage) {
+        self.id = UUID()
+        self.index = index
+        self.imageData = other.imageData
+        self.originalImageData = other.originalImageData
+        self.editData = other.editData
+        self.recognizedText = other.recognizedText
+        self.textLinesData = other.textLinesData
+    }
+
     var image: UIImage? {
         UIImage(data: imageData)
     }

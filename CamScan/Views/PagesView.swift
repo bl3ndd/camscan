@@ -10,6 +10,7 @@ struct PagesView: View {
     @Environment(\.modelContext) private var modelContext
     @State private var showScanner = false
     @State private var showPaywall = false
+    @State private var selection = Set<UUID>()
 
     private var sortedPages: [ScannedPage] {
         document.pages.sorted { $0.index < $1.index }
@@ -17,7 +18,7 @@ struct PagesView: View {
 
     var body: some View {
         NavigationStack {
-            List {
+            List(selection: $selection) {
                 ForEach(sortedPages) { page in
                     HStack(spacing: 12) {
                         if let image = page.image {
@@ -29,6 +30,7 @@ struct PagesView: View {
                         }
                         Text("Page \(page.index + 1)")
                     }
+                    .tag(page.id)
                 }
                 .onMove(perform: movePages)
                 .onDelete(perform: deletePages)
@@ -41,12 +43,19 @@ struct PagesView: View {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Done") { dismiss() }
                 }
-                ToolbarItem(placement: .bottomBar) {
+                ToolbarItemGroup(placement: .bottomBar) {
                     Button {
                         showScanner = true
                     } label: {
                         Label("Add Pages", systemImage: "plus.viewfinder")
                     }
+
+                    Spacer()
+
+                    Button("Move to New Document") {
+                        moveSelectionToNewDocument()
+                    }
+                    .disabled(selection.isEmpty || selection.count >= document.pages.count)
                 }
             }
             .fullScreenCover(isPresented: $showScanner) {
@@ -82,6 +91,29 @@ struct PagesView: View {
             modelContext.delete(page)
         }
         reindex(sortedPages)
+    }
+
+    /// Splits the selected pages off into a new document (Pro).
+    private func moveSelectionToNewDocument() {
+        guard store.isPurchased else {
+            showPaywall = true
+            return
+        }
+        let moving = sortedPages.filter { selection.contains($0.id) }
+        guard !moving.isEmpty, moving.count < document.pages.count else { return }
+
+        let newDocument = ScannedDocument(title: "\(document.title) (part)")
+        for (index, page) in moving.enumerated() {
+            newDocument.pages.append(ScannedPage(index: index, copying: page))
+        }
+        modelContext.insert(newDocument)
+
+        document.pages.removeAll { selection.contains($0.id) }
+        for page in moving {
+            modelContext.delete(page)
+        }
+        reindex(sortedPages)
+        selection.removeAll()
     }
 
     private func appendPages(_ images: [UIImage]) {

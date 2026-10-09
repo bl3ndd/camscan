@@ -128,12 +128,21 @@ nonisolated enum PDFService {
         )
     }
 
+    /// Re-saves the PDF so it can only be opened with `password`.
+    static func encrypt(_ data: Data, password: String, to url: URL) -> Bool {
+        guard let document = PDFDocument(data: data) else { return false }
+        return document.write(to: url, withOptions: [
+            .userPasswordOption: password,
+            .ownerPasswordOption: password,
+        ])
+    }
+
     /// Characters that can't appear in a file name are replaced, so titles like "Bills 09/2026" export fine.
-    static func fileName(for title: String) -> String {
+    static func fileName(for title: String, extension fileExtension: String = "pdf") -> String {
         let cleaned = title
             .components(separatedBy: CharacterSet(charactersIn: "/\\:"))
             .joined(separator: "-")
             .trimmingCharacters(in: .whitespacesAndNewlines)
-        return (cleaned.isEmpty ? "Scan" : cleaned) + ".pdf"
+        return (cleaned.isEmpty ? "Scan" : cleaned) + "." + fileExtension
     }
 }

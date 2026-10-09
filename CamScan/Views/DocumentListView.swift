@@ -1,6 +1,7 @@
 import SwiftUI
 import SwiftData
 import PhotosUI
+import UniformTypeIdentifiers
 
 struct DocumentListView: View {
     @Environment(\.modelContext) private var modelContext
@@ -14,6 +15,9 @@ struct DocumentListView: View {
     @State private var showPhotoPicker = false
     @State private var photoItems: [PhotosPickerItem] = []
     @State private var isImporting = false
+    @State private var showFileImporter = false
+    @State private var editMode: EditMode = .inactive
+    @State private var selection = Set<PersistentIdentifier>()
 
     private var filteredDocuments: [ScannedDocument] {
         if searchText.isEmpty { return documents }
@@ -47,6 +51,11 @@ struct DocumentListView: View {
                         } label: {
                             Label("Import from Photos", systemImage: "photo.on.rectangle")
                         }
+                        Button {
+                            showFileImporter = true
+                        } label: {
+                            Label("Import from Files", systemImage: "folder")
+                        }
                     } label: {
                         Image(systemName: "doc.viewfinder")
                             .font(.title2)
@@ -58,6 +67,24 @@ struct DocumentListView: View {
                         showSettings = true
                     } label: {
                         Image(systemName: "gearshape")
+                    }
+                }
+                ToolbarItem(placement: .navigationBarLeading) {
+                    if !documents.isEmpty {
+                        Button(editMode.isEditing ? "Done" : "Select") {
+                            withAnimation {
+                                editMode = editMode.isEditing ? .inactive : .active
+                                selection.removeAll()
+                            }
+                        }
+                    }
+                }
+                ToolbarItem(placement: .bottomBar) {
+                    if editMode.isEditing {
+                        Button("Merge \(selection.count) Documents") {
+                            mergeSelected()
+                        }
+                        .disabled(selection.count < 2)
                     }
                 }
                 ToolbarItem(placement: .navigationBarLeading) {
@@ -96,9 +123,14 @@ struct DocumentListView: View {
             }
             .photosPicker(isPresented: $showPhotoPicker, selection: $photoItems, maxSelectionCount: 30, matching: .images)
             .onChange(of: photoItems) { importPhotos() }
+            .fileImporter(isPresented: $showFileImporter, allowedContentTypes: [.pdf, .image], allowsMultipleSelection: true) { result in
+                if case .success(let urls) = result {
+                    importFiles(urls)
+                }
+            }
             .overlay {
                 if isImporting {
-                    ProgressView("Processing photos…")
+                    ProgressView("Importing…")
                         .padding()
                         .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))
                 }
@@ -120,20 +152,26 @@ struct DocumentListView: View {
             Button("Import from Photos") {
                 startImport()
             }
+
+            Button("Import from Files") {
+                showFileImporter = true
+            }
         }
     }
 
     private var documentList: some View {
-        List {
+        List(selection: $selection) {
             Section {
                 ForEach(filteredDocuments) { document in
                     NavigationLink(value: document) {
                         DocumentRow(document: document)
                     }
+                    .tag(document.persistentModelID)
                 }
                 .onDelete(perform: deleteDocuments)
             }
         }
+        .environment(\.editMode, $editMode)
         .navigationDestination(for: ScannedDocument.self) { document in
             DocumentDetailView(document: document)
         }
@@ -145,6 +183,50 @@ struct DocumentListView: View {
 
     private func startImport() {
         showPhotoPicker = true
+    }
+
+    /// Imports PDFs page by page and images with automatic cropping, as one document.
+    private func importFiles(_ urls: [URL]) {
+        guard !urls.isEmpty else { return }
+        isImporting = true
+
+        Task {
+            let processed = await Task.detached(priority: .userInitiated) {
+                urls.flatMap { ImportService.processFile(at: $0) }
+            }.value
+
+            if !processed.isEmpty {
+                let pages = processed.enumerated().map { ScannedPage(index: $0.offset, processed: $0.element) }
+                let title = urls.count == 1 ? urls[0].deletingPathExtension().lastPathComponent : nil
+                saveDocument(pages: pages, title: title)
+            }
+            isImporting = false
+        }
+    }
+
+    /// Combines the selected documents, oldest first, into a new document (Pro). Originals are kept.
+    private func mergeSelected() {
+        guard store.isPurchased else {
+            showPaywall = true
+            return
+        }
+        let selected = documents
+            .filter { selection.contains($0.persistentModelID) }
+            .sorted { $0.createdAt < $1.createdAt }
+        guard selected.count >= 2 else { return }
+
+        var pages: [ScannedPage] = []
+        for document in selected {
+            for page in document.pages.sorted(by: { $0.index < $1.index }) {
+                pages.append(ScannedPage(index: pages.count, copying: page))
+            }
+        }
+        saveDocument(pages: pages, title: "Merged \(formattedDate())")
+
+        withAnimation {
+            selection.removeAll()
+            editMode = .inactive
+        }
     }
 
     /// Finds the document on each photo, crops it and evens out the lighting, off the main actor.
@@ -178,8 +260,8 @@ struct DocumentListView: View {
         saveDocument(pages: images.enumerated().map { ScannedPage(index: $0.offset, image: $0.element) })
     }
 
-    private func saveDocument(pages: [ScannedPage]) {
-        let document = ScannedDocument(title: "Scan \(formattedDate())")
+    private func saveDocument(pages: [ScannedPage], title: String? = nil) {
+        let document = ScannedDocument(title: title ?? "Scan \(formattedDate())")
         document.pages.append(contentsOf: pages)
         modelContext.insert(document)
     }

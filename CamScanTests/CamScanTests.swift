@@ -155,3 +155,48 @@ struct OverlayTests {
         return CGFloat(pixel[0]) / 255
     }
 }
+
+struct ExportTests {
+
+    @Test func csvEscapesSpecialCharacters() {
+        let csv = TableExportService.csv([[["Name", "Note"], ["Иванов, И.", "said \"hi\""]]])
+        #expect(csv == "\u{FEFF}Name,Note\r\n\"Иванов, И.\",\"said \"\"hi\"\"\"")
+    }
+
+    @Test func csvSeparatesTablesWithEmptyLine() {
+        let csv = TableExportService.csv([[["a"]], [["b"]]])
+        #expect(csv == "\u{FEFF}a\r\n\r\nb")
+    }
+
+    @Test func encryptedPDFNeedsPassword() throws {
+        let image = UIGraphicsImageRenderer(size: CGSize(width: 100, height: 140)).image { context in
+            UIColor.white.setFill()
+            context.fill(CGRect(x: 0, y: 0, width: 100, height: 140))
+        }
+        let data = PDFService.generatePDF(from: [image], pageSize: .a4)
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent("locked-\(UUID()).pdf")
+        defer { try? FileManager.default.removeItem(at: url) }
+
+        #expect(PDFService.encrypt(data, password: "secret", to: url))
+        let document = try #require(PDFDocument(url: url))
+        #expect(document.isLocked)
+        #expect(!document.unlock(withPassword: "wrong"))
+        #expect(document.unlock(withPassword: "secret"))
+    }
+
+    @Test func pdfImportRendersEveryPage() throws {
+        let images = (0..<3).map { _ in
+            UIGraphicsImageRenderer(size: CGSize(width: 100, height: 140)).image { context in
+                UIColor.white.setFill()
+                context.fill(CGRect(x: 0, y: 0, width: 100, height: 140))
+            }
+        }
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent("import-\(UUID()).pdf")
+        defer { try? FileManager.default.removeItem(at: url) }
+        try PDFService.generatePDF(from: images, pageSize: .a4).write(to: url)
+
+        let pages = ImportService.processPDF(at: url)
+        #expect(pages.count == 3)
+        #expect(pages.allSatisfy { $0.originalImageData == nil })
+    }
+}
