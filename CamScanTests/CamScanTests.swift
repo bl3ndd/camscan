@@ -203,19 +203,26 @@ struct ExportTests {
 
 struct QualityTests {
 
-    @Test func smallerQualityMakesSmallerPDF() {
-        // Noise doesn't compress, so the size difference comes from downscaling and JPEG quality.
-        let size = CGSize(width: 2400, height: 3200)
-        let format = UIGraphicsImageRendererFormat()
-        format.scale = 1
-        let image = UIGraphicsImageRenderer(size: size, format: format).image { context in
-            for y in stride(from: 0, to: Int(size.height), by: 16) {
-                for x in stride(from: 0, to: Int(size.width), by: 16) {
-                    UIColor(white: CGFloat((x * 7 + y * 13) % 255) / 255, alpha: 1).setFill()
-                    context.fill(CGRect(x: x, y: y, width: 16, height: 16))
-                }
-            }
+    @Test func smallerQualityMakesSmallerPDF() throws {
+        // Per-pixel noise can't be compressed losslessly, so the size difference
+        // comes from downscaling and JPEG quality, like on a real photo.
+        let width = 2400, height = 3200
+        var state: UInt32 = 42
+        var pixels = [UInt8](repeating: 255, count: width * height * 4)
+        for i in stride(from: 0, to: pixels.count, by: 4) {
+            state = state &* 1_664_525 &+ 1_013_904_223
+            pixels[i] = UInt8(truncatingIfNeeded: state >> 24)
+            pixels[i + 1] = UInt8(truncatingIfNeeded: state >> 16)
+            pixels[i + 2] = UInt8(truncatingIfNeeded: state >> 8)
         }
+        let cgImage = try #require(pixels.withUnsafeMutableBytes { buffer in
+            CGContext(
+                data: buffer.baseAddress, width: width, height: height, bitsPerComponent: 8, bytesPerRow: width * 4,
+                space: CGColorSpaceCreateDeviceRGB(),
+                bitmapInfo: CGImageAlphaInfo.noneSkipLast.rawValue
+            )?.makeImage()
+        })
+        let image = UIImage(cgImage: cgImage)
         let page = [PDFPageContent(image: image, lines: [])]
         let small = PDFService.generatePDF(from: page, pageSize: .a4, quality: .small)
         let high = PDFService.generatePDF(from: page, pageSize: .a4, quality: .high)
