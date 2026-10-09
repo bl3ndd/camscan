@@ -8,6 +8,7 @@ final class ScannedDocument {
     var title: String
     var createdAt: Date
     @Relationship(deleteRule: .cascade) var pages: [ScannedPage]
+    var folder: Folder?
 
     init(title: String = "Untitled", pages: [ScannedPage] = []) {
         self.id = UUID()

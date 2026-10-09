@@ -26,7 +26,7 @@ struct CamScanApp: App {
                 .environmentObject(store)
                 .environmentObject(appLock)
         }
-        .modelContainer(for: ScannedDocument.self)
+        .modelContainer(for: [ScannedDocument.self, Folder.self])
         .onChange(of: scenePhase) { _, phase in
             if phase == .background && store.isPurchased {
                 appLock.lock()

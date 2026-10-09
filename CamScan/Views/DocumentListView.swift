@@ -6,6 +6,9 @@ import UniformTypeIdentifiers
 struct DocumentListView: View {
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \ScannedDocument.createdAt, order: .reverse) private var documents: [ScannedDocument]
+    @Query(sort: \Folder.name) private var folders: [Folder]
+    @State private var showNewFolder = false
+    @State private var newFolderName = ""
 
     @EnvironmentObject private var store: StoreService
     @State private var showSettings = false
@@ -21,7 +24,8 @@ struct DocumentListView: View {
     @State private var selection = Set<PersistentIdentifier>()
 
     private var filteredDocuments: [ScannedDocument] {
-        if searchText.isEmpty { return documents }
+        // Search looks inside folders too; otherwise the main list shows unfiled documents.
+        if searchText.isEmpty { return documents.filter { $0.folder == nil } }
         return documents.filter { doc in
             doc.title.localizedCaseInsensitiveContains(searchText) ||
             doc.pages.contains { $0.recognizedText?.localizedCaseInsensitiveContains(searchText) == true }
@@ -31,7 +35,7 @@ struct DocumentListView: View {
     var body: some View {
         NavigationStack {
             Group {
-                if documents.isEmpty {
+                if documents.isEmpty && folders.isEmpty {
                     emptyState
                 } else {
                     documentList
@@ -56,6 +60,13 @@ struct DocumentListView: View {
                             showFileImporter = true
                         } label: {
                             Label("Import from Files", systemImage: "folder")
+                        }
+                        Divider()
+                        Button {
+                            newFolderName = ""
+                            showNewFolder = true
+                        } label: {
+                            Label("New Folder", systemImage: "folder.badge.plus")
                         }
                     } label: {
                         Image(systemName: "doc.viewfinder")
@@ -122,6 +133,16 @@ struct DocumentListView: View {
             .sheet(isPresented: $showSettings) {
                 SettingsView()
             }
+            .alert("New Folder", isPresented: $showNewFolder) {
+                TextField("Name", text: $newFolderName)
+                Button("Cancel", role: .cancel) {}
+                Button("Create") {
+                    let name = newFolderName.trimmingCharacters(in: .whitespacesAndNewlines)
+                    if !name.isEmpty {
+                        modelContext.insert(Folder(name: name))
+                    }
+                }
+            }
             .fullScreenCover(isPresented: Binding(
                 get: { !hasSeenOnboarding },
                 set: { hasSeenOnboarding = !$0 }
@@ -168,12 +189,51 @@ struct DocumentListView: View {
 
     private var documentList: some View {
         List(selection: $selection) {
+            if searchText.isEmpty && !folders.isEmpty {
+                Section("Folders") {
+                    ForEach(folders) { folder in
+                        NavigationLink(value: folder) {
+                            Label {
+                                HStack {
+                                    Text(folder.name)
+                                    Spacer()
+                                    Text("\(folder.documents.count)")
+                                        .foregroundStyle(.secondary)
+                                }
+                            } icon: {
+                                Image(systemName: "folder.fill")
+                            }
+                        }
+                    }
+                    .onDelete { offsets in
+                        for index in offsets {
+                            modelContext.delete(folders[index])
+                        }
+                    }
+                }
+            }
+
             Section {
                 ForEach(filteredDocuments) { document in
                     NavigationLink(value: document) {
                         DocumentRow(document: document)
                     }
                     .tag(document.persistentModelID)
+                    .contextMenu {
+                        if !folders.isEmpty {
+                            Menu {
+                                ForEach(folders) { folder in
+                                    Button(folder.name) { document.folder = folder }
+                                }
+                                if document.folder != nil {
+                                    Divider()
+                                    Button("Remove from Folder") { document.folder = nil }
+                                }
+                            } label: {
+                                Label("Move to Folder", systemImage: "folder")
+                            }
+                        }
+                    }
                 }
                 .onDelete(perform: deleteDocuments)
             }
@@ -181,6 +241,9 @@ struct DocumentListView: View {
         .environment(\.editMode, $editMode)
         .navigationDestination(for: ScannedDocument.self) { document in
             DocumentDetailView(document: document)
+        }
+        .navigationDestination(for: Folder.self) { folder in
+            FolderView(folder: folder)
         }
     }
 

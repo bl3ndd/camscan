@@ -203,6 +203,16 @@
         }
       }
     },
+    "Create": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Создать"
+          }
+        }
+      }
+    },
     "Crop": {
       "localizations": {
         "ru": {
@@ -279,6 +289,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Редактировать страницу"
+          }
+        }
+      }
+    },
+    "Empty Folder": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Пустая папка"
           }
         }
       }
@@ -403,6 +423,16 @@
         }
       }
     },
+    "Folders": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Папки"
+          }
+        }
+      }
+    },
     "Full Page": {
       "localizations": {
         "ru": {
@@ -493,6 +523,16 @@
         }
       }
     },
+    "Long-press a document and choose Move to Folder.": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Нажмите и удерживайте документ, затем выберите «Переместить в папку»."
+          }
+        }
+      }
+    },
     "Magic Color": {
       "localizations": {
         "ru": {
@@ -553,6 +593,16 @@
         }
       }
     },
+    "Move to Folder": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Переместить в папку"
+          }
+        }
+      }
+    },
     "Move to New Document": {
       "localizations": {
         "ru": {
@@ -569,6 +619,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "Моя подпись"
+          }
+        }
+      }
+    },
+    "Name": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Название"
+          }
+        }
+      }
+    },
+    "New Folder": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Новая папка"
           }
         }
       }
@@ -843,6 +913,16 @@
         }
       }
     },
+    "Remove from Folder": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Убрать из папки"
+          }
+        }
+      }
+    },
     "Rename": {
       "localizations": {
         "ru": {
@@ -859,6 +939,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Переименовать документ"
+          }
+        }
+      }
+    },
+    "Rename Folder": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Переименовать папку"
           }
         }
       }

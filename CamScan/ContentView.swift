@@ -16,7 +16,7 @@ struct ContentView: View {
 
 #Preview {
     ContentView()
-        .modelContainer(for: ScannedDocument.self, inMemory: true)
+        .modelContainer(for: [ScannedDocument.self, Folder.self], inMemory: true)
         .environmentObject(StoreService())
         .environmentObject(AppLock())
 }
