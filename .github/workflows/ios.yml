@@ -1,0 +1,66 @@
+name: iOS build & tests
+
+on:
+  push:
+    paths:
+      - "CamScan/**"
+      - "CamScanTests/**"
+      - "CamScan.xcodeproj/**"
+      - ".github/workflows/ios.yml"
+  pull_request:
+    paths:
+      - "CamScan/**"
+      - "CamScanTests/**"
+      - "CamScan.xcodeproj/**"
+      - ".github/workflows/ios.yml"
+  workflow_dispatch:
+
+# macOS minutes count 10x against the free quota: drop superseded runs.
+concurrency:
+  group: ios-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-test:
+    runs-on: macos-26
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Select newest Xcode 26
+        run: |
+          ls -d /Applications/Xcode*.app
+          XCODE=$(ls -d /Applications/Xcode_26*.app | sort -V | tail -1)
+          echo "Using $XCODE"
+          sudo xcode-select -s "$XCODE"
+          xcodebuild -version
+          xcodebuild -showsdks | grep -i iphone
+
+      - name: Pick iPhone simulator
+        run: |
+          UDID=$(xcrun simctl list devices available -j \
+            | jq -r '[.devices | to_entries[] | select(.key | contains("iOS-26")) | .value[] | select(.name | startswith("iPhone"))][0].udid')
+          if [ -z "$UDID" ] || [ "$UDID" = "null" ]; then
+            xcrun simctl list devices available
+            echo "No iOS 26 iPhone simulator found" && exit 1
+          fi
+          echo "SIM_UDID=$UDID" >> "$GITHUB_ENV"
+
+      - name: Build and run unit tests
+        run: |
+          set -o pipefail
+          xcodebuild test \
+            -project CamScan.xcodeproj \
+            -scheme CamScan \
+            -destination "id=$SIM_UDID" \
+            -only-testing:CamScanTests \
+            CODE_SIGNING_ALLOWED=NO \
+            | tee build.log | grep -E "error:|warning: .*(isolat|Sendable|concurren)|Test (Suite|Case)|✔|✘|\*\* (BUILD|TEST)" || true
+          exit ${PIPESTATUS[0]}
+
+      - name: Upload log
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-log
+          path: build.log
