@@ -1,5 +1,6 @@
 import SwiftUI
 import SwiftData
+import PhotosUI
 
 struct DocumentListView: View {
     @Environment(\.modelContext) private var modelContext
@@ -9,6 +10,9 @@ struct DocumentListView: View {
     @State private var showScanner = false
     @State private var showPaywall = false
     @State private var searchText = ""
+    @State private var showPhotoPicker = false
+    @State private var photoItems: [PhotosPickerItem] = []
+    @State private var isImporting = false
 
     private var filteredDocuments: [ScannedDocument] {
         if searchText.isEmpty { return documents }
@@ -31,12 +35,22 @@ struct DocumentListView: View {
             .searchable(text: $searchText, prompt: "Search documents & text")
             .toolbar {
                 ToolbarItem(placement: .primaryAction) {
-                    Button {
-                        startScan()
+                    Menu {
+                        Button {
+                            startScan()
+                        } label: {
+                            Label("Scan with Camera", systemImage: "camera")
+                        }
+                        Button {
+                            startImport()
+                        } label: {
+                            Label("Import from Photos", systemImage: "photo.on.rectangle")
+                        }
                     } label: {
                         Image(systemName: "doc.viewfinder")
                             .font(.title2)
                     }
+                    .disabled(isImporting)
                 }
                 ToolbarItem(placement: .navigationBarLeading) {
                     if !store.isPurchased {
@@ -70,6 +84,15 @@ struct DocumentListView: View {
             .sheet(isPresented: $showPaywall) {
                 PaywallView(store: store)
             }
+            .photosPicker(isPresented: $showPhotoPicker, selection: $photoItems, maxSelectionCount: 30, matching: .images)
+            .onChange(of: photoItems) { importPhotos() }
+            .overlay {
+                if isImporting {
+                    ProgressView("Processing photos…")
+                        .padding()
+                        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))
+                }
+            }
         }
         .environmentObject(store)
     }
@@ -84,6 +107,10 @@ struct DocumentListView: View {
                 startScan()
             }
             .buttonStyle(.borderedProminent)
+
+            Button("Import from Photos") {
+                startImport()
+            }
         }
     }
 
@@ -125,12 +152,49 @@ struct DocumentListView: View {
         }
     }
 
-    private func saveDocument(images: [UIImage]) {
-        let document = ScannedDocument(title: "Scan \(formattedDate())")
-        for (index, image) in images.enumerated() {
-            let page = ScannedPage(index: index, image: image)
-            document.pages.append(page)
+    private func startImport() {
+        if ScanLimitService.canScan() {
+            showPhotoPicker = true
+        } else {
+            showPaywall = true
         }
+    }
+
+    /// Finds the document on each photo, crops it and evens out the lighting, off the main actor.
+    private func importPhotos() {
+        let items = photoItems
+        guard !items.isEmpty else { return }
+        photoItems = []
+        isImporting = true
+
+        Task {
+            var processed: [ProcessedPage] = []
+            for item in items {
+                guard let data = try? await item.loadTransferable(type: Data.self) else { continue }
+                let page = await Task.detached(priority: .userInitiated) {
+                    ImportService.process(data)
+                }.value
+                if let page {
+                    processed.append(page)
+                }
+            }
+
+            if !processed.isEmpty {
+                let pages = processed.enumerated().map { ScannedPage(index: $0.offset, processed: $0.element) }
+                saveDocument(pages: pages)
+                ScanLimitService.recordScan()
+            }
+            isImporting = false
+        }
+    }
+
+    private func saveDocument(images: [UIImage]) {
+        saveDocument(pages: images.enumerated().map { ScannedPage(index: $0.offset, image: $0.element) })
+    }
+
+    private func saveDocument(pages: [ScannedPage]) {
+        let document = ScannedDocument(title: "Scan \(formattedDate())")
+        document.pages.append(contentsOf: pages)
         modelContext.insert(document)
     }
 

@@ -11,8 +11,9 @@ struct DocumentDetailView: View {
     @State private var isRecognizing = false
     @State private var showShareSheet = false
     @State private var pdfURL: URL?
-    @State private var showFilterSheet = false
+    @State private var showEditor = false
     @State private var showPaywall = false
+    @AppStorage("pdfPageSize") private var pageSize: PDFPageSize = .localeDefault
 
     private var sortedPages: [ScannedPage] {
         document.pages.sorted { $0.index < $1.index }
@@ -69,9 +70,9 @@ struct DocumentDetailView: View {
                     }
 
                     Button {
-                        showFilterSheet = true
+                        showEditor = true
                     } label: {
-                        Label("Filters", systemImage: "camera.filters")
+                        Label("Edit Page", systemImage: "crop")
                     }
 
                     Divider()
@@ -98,6 +99,15 @@ struct DocumentDetailView: View {
                         Label("Export PDF", systemImage: "arrow.up.doc")
                     }
 
+                    Picker(selection: $pageSize) {
+                        ForEach(PDFPageSize.allCases) { size in
+                            Text(size.title).tag(size)
+                        }
+                    } label: {
+                        Label("Page Size", systemImage: "doc.richtext")
+                    }
+                    .pickerStyle(.menu)
+
                     if let text = recognizedText, !text.isEmpty {
                         Button {
                             UIPasteboard.general.string = text
@@ -117,11 +127,12 @@ struct DocumentDetailView: View {
                 document.title = newTitle
             }
         }
-        .sheet(isPresented: $showFilterSheet) {
+        .fullScreenCover(isPresented: $showEditor) {
             if let page = sortedPages[safe: selectedPageIndex],
-               let image = page.image {
-                PageFilterView(originalImage: image) { filteredImage, _ in
-                    page.imageData = filteredImage.jpegData(compressionQuality: 0.8) ?? Data()
+               let source = page.sourceImage {
+                PageEditorView(source: source, edit: page.edit) { edit, rendered in
+                    page.apply(edit: edit, rendered: rendered)
+                    recognizedText = nil
                 }
             }
         }
@@ -192,8 +203,8 @@ struct DocumentDetailView: View {
     }
 
     private func exportPDF() {
-        let pdfData = PDFService.generatePDF(from: sortedPages)
-        let fileName = "\(document.title).pdf"
+        let pdfData = PDFService.generatePDF(from: sortedPages, pageSize: pageSize)
+        let fileName = PDFService.fileName(for: document.title)
         let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent(fileName)
 
         do {
