@@ -60,9 +60,13 @@ final class FilterPreviewTests: XCTestCase {
             bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
         )
         context?.draw(patch, in: CGRect(x: 0, y: 0, width: 8, height: 8))
-        let sum = stride(from: 0, to: pixels.count, by: 4).reduce(0) { total, i in
-            total + Int(pixels[i]) + Int(pixels[i + 1]) + Int(pixels[i + 2])
+        var sum = 0
+        for i in stride(from: 0, to: pixels.count, by: 4) {
+            sum += Int(pixels[i])
+            sum += Int(pixels[i + 1])
+            sum += Int(pixels[i + 2])
         }
-        return CGFloat(sum) / CGFloat(8 * 8 * 3 * 255)
+        let maximum = 8 * 8 * 3 * 255
+        return CGFloat(sum) / CGFloat(maximum)
     }
 }

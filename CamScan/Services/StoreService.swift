@@ -3,7 +3,7 @@ import Combine
 
 @MainActor
 final class StoreService: ObservableObject {
-    static let proProductID = "com.camscan.pro"
+    nonisolated static let proProductID = "com.camscan.pro"
     /// Cached so Pro features work offline at launch; `checkEntitlement` keeps it honest.
     private static let cachedProKey = "is_pro_user"
 
