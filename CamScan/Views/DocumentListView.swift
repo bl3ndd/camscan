@@ -9,6 +9,7 @@ struct DocumentListView: View {
 
     @EnvironmentObject private var store: StoreService
     @State private var showSettings = false
+    @AppStorage("hasSeenOnboarding") private var hasSeenOnboarding = false
     @State private var showScanner = false
     @State private var showPaywall = false
     @State private var searchText = ""
@@ -120,6 +121,12 @@ struct DocumentListView: View {
             }
             .sheet(isPresented: $showSettings) {
                 SettingsView()
+            }
+            .fullScreenCover(isPresented: Binding(
+                get: { !hasSeenOnboarding },
+                set: { hasSeenOnboarding = !$0 }
+            )) {
+                OnboardingView()
             }
             .photosPicker(isPresented: $showPhotoPicker, selection: $photoItems, maxSelectionCount: 30, matching: .images)
             .onChange(of: photoItems) { importPhotos() }

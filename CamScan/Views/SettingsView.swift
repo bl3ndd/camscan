@@ -6,6 +6,7 @@ struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
 
     @AppStorage("pdfPageSize") private var pageSize: PDFPageSize = .localeDefault
+    @AppStorage("pdfQuality") private var quality: PDFQuality = .medium
     @AppStorage(AppLock.enabledKey) private var lockEnabled = false
     @State private var showPaywall = false
     @State private var showSignature = false
@@ -54,6 +55,11 @@ struct SettingsView: View {
                     Picker("Page Size", selection: $pageSize) {
                         ForEach(PDFPageSize.allCases) { size in
                             Text(size.title).tag(size)
+                        }
+                    }
+                    Picker("PDF Quality", selection: $quality) {
+                        ForEach(PDFQuality.allCases) { quality in
+                            Text(quality.title).tag(quality)
                         }
                     }
                 }

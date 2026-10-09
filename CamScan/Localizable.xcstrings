@@ -293,12 +293,32 @@
         }
       }
     },
+    "Everything is processed on your iPhone. Your documents never leave it.": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Всё обрабатывается на iPhone. Документы никуда не отправляются."
+          }
+        }
+      }
+    },
     "Export": {
       "localizations": {
         "ru": {
           "stringUnit": {
             "state": "translated",
             "value": "Экспортировать"
+          }
+        }
+      }
+    },
+    "Export Images (JPEG)": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Экспорт картинок (JPEG)"
           }
         }
       }
@@ -329,6 +349,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Экспорт таблиц (CSV)"
+          }
+        }
+      }
+    },
+    "Export Text (TXT)": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Экспорт текста (TXT)"
           }
         }
       }
@@ -393,12 +423,32 @@
         }
       }
     },
+    "Get Started": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Начать"
+          }
+        }
+      }
+    },
     "Grayscale": {
       "localizations": {
         "ru": {
           "stringUnit": {
             "state": "translated",
             "value": "Оттенки серого"
+          }
+        }
+      }
+    },
+    "High": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Высокий"
           }
         }
       }
@@ -463,6 +513,16 @@
         }
       }
     },
+    "Medium": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Средний"
+          }
+        }
+      }
+    },
     "Merge %lld Documents": {
       "localizations": {
         "ru": {
@@ -523,12 +583,32 @@
         }
       }
     },
+    "No ads, no watermarks": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Без рекламы и водяных знаков"
+          }
+        }
+      }
+    },
     "No document found": {
       "localizations": {
         "ru": {
           "stringUnit": {
             "state": "translated",
             "value": "Документ не найден"
+          }
+        }
+      }
+    },
+    "No subscriptions": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Без подписок"
           }
         }
       }
@@ -599,6 +679,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "PDF"
+          }
+        }
+      }
+    },
+    "PDF Quality": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Качество PDF"
           }
         }
       }
@@ -683,12 +773,32 @@
         }
       }
     },
+    "Private by design": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Приватность по умолчанию"
+          }
+        }
+      }
+    },
     "Pro": {
       "localizations": {
         "ru": {
           "stringUnit": {
             "state": "translated",
             "value": "Pro"
+          }
+        }
+      }
+    },
+    "Pro is a one-time purchase, shared with your family.": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pro покупается один раз и доступен всей семье."
           }
         }
       }
@@ -823,6 +933,16 @@
         }
       }
     },
+    "Scan, crop, recognize text and export PDFs for free, without limits.": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Сканируйте, обрезайте, распознавайте текст и сохраняйте PDF бесплатно и без ограничений."
+          }
+        }
+      }
+    },
     "Security": {
       "localizations": {
         "ru": {
@@ -893,6 +1013,16 @@
         }
       }
     },
+    "Small": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Маленький"
+          }
+        }
+      }
+    },
     "Tap the scan button to scan your first document": {
       "localizations": {
         "ru": {
@@ -959,6 +1089,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Версия"
+          }
+        }
+      }
+    },
+    "Welcome to CamScan": {
+      "localizations": {
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Добро пожаловать в CamScan"
           }
         }
       }

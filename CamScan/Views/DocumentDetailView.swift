@@ -10,7 +10,8 @@ struct DocumentDetailView: View {
     @State private var recognizedText: String?
     @State private var isRecognizing = false
     @State private var showShareSheet = false
-    @State private var pdfURL: URL?
+    @State private var shareItems: [URL] = []
+    @AppStorage("pdfQuality") private var quality: PDFQuality = .medium
     @State private var showEditor = false
     @State private var isExporting = false
     @State private var showPages = false
@@ -153,6 +154,29 @@ struct DocumentDetailView: View {
                     }
                     .disabled(isExporting)
 
+                    Button {
+                        exportImages()
+                    } label: {
+                        Label("Export Images (JPEG)", systemImage: "photo.on.rectangle")
+                    }
+                    .disabled(isExporting)
+
+                    Button {
+                        exportText()
+                    } label: {
+                        Label("Export Text (TXT)", systemImage: "doc.plaintext")
+                    }
+                    .disabled(isExporting)
+
+                    Picker(selection: $quality) {
+                        ForEach(PDFQuality.allCases) { quality in
+                            Text(quality.title).tag(quality)
+                        }
+                    } label: {
+                        Label("PDF Quality", systemImage: "arrow.down.right.and.arrow.up.left")
+                    }
+                    .pickerStyle(.menu)
+
                     Picker(selection: $pageSize) {
                         ForEach(PDFPageSize.allCases) { size in
                             Text(size.title).tag(size)
@@ -206,8 +230,8 @@ struct DocumentDetailView: View {
             }
         }
         .sheet(isPresented: $showShareSheet) {
-            if let url = pdfURL {
-                ShareSheet(items: [url])
+            if !shareItems.isEmpty {
+                ShareSheet(items: shareItems)
             }
         }
         .sheet(isPresented: $showPaywall) {
@@ -376,9 +400,10 @@ struct DocumentDetailView: View {
 
             let pageContents = contents
             let pageSize = pageSize
+            let quality = quality
             let fileName = PDFService.fileName(for: document.title)
             let url = await Task.detached(priority: .userInitiated) { () -> URL? in
-                let data = PDFService.generatePDF(from: pageContents, pageSize: pageSize)
+                let data = PDFService.generatePDF(from: pageContents, pageSize: pageSize, quality: quality)
                 let url = FileManager.default.temporaryDirectory.appendingPathComponent(fileName)
                 if let password {
                     return PDFService.encrypt(data, password: password, to: url) ? url : nil
@@ -394,8 +419,53 @@ struct DocumentDetailView: View {
 
             isExporting = false
             if let url {
-                pdfURL = url
+                shareItems = [url]
                 showShareSheet = true
+            }
+        }
+    }
+
+    /// Shares every page as a JPEG: "Title 1.jpg", "Title 2.jpg"...
+    private func exportImages() {
+        let pagesData = sortedPages.map(\.imageData)
+        let baseName = PDFService.fileName(for: document.title, extension: "jpg").dropLast(4)
+        let folder = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        do {
+            try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+            shareItems = try pagesData.enumerated().map { index, data in
+                let url = folder.appendingPathComponent("\(baseName) \(index + 1).jpg")
+                try data.write(to: url)
+                return url
+            }
+            showShareSheet = true
+        } catch {
+            print("Failed to write images: \(error)")
+        }
+    }
+
+    /// Recognizes pages that weren't yet and shares all text as one .txt file.
+    private func exportText() {
+        isExporting = true
+        let pages = sortedPages
+        let fileName = PDFService.fileName(for: document.title, extension: "txt")
+
+        Task {
+            var texts: [String] = []
+            for page in pages {
+                if page.textLines == nil, let lines = try? await recognizeLines(on: page) {
+                    page.setRecognized(lines)
+                }
+                texts.append(page.recognizedText ?? "")
+            }
+            isExporting = false
+
+            let url = FileManager.default.temporaryDirectory.appendingPathComponent(fileName)
+            do {
+                try texts.joined(separator: "\n\n").write(to: url, atomically: true, encoding: .utf8)
+                shareItems = [url]
+                showShareSheet = true
+            } catch {
+                print("Failed to write text: \(error)")
             }
         }
     }
@@ -426,7 +496,7 @@ struct DocumentDetailView: View {
             let url = FileManager.default.temporaryDirectory.appendingPathComponent(fileName)
             do {
                 try TableExportService.csv(tables).write(to: url, atomically: true, encoding: .utf8)
-                pdfURL = url
+                shareItems = [url]
                 showShareSheet = true
             } catch {
                 print("Failed to write CSV: \(error)")

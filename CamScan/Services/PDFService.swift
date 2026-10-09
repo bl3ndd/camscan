@@ -32,6 +32,40 @@ nonisolated enum PDFPageSize: String, CaseIterable, Identifiable, Sendable {
     }
 }
 
+/// Image quality inside exported PDFs: trades file size for sharpness.
+nonisolated enum PDFQuality: String, CaseIterable, Identifiable, Sendable {
+    case small
+    case medium
+    case high
+
+    var id: String { rawValue }
+
+    var title: LocalizedStringResource {
+        switch self {
+        case .small: "Small"
+        case .medium: "Medium"
+        case .high: "High"
+        }
+    }
+
+    /// Long side in pixels and JPEG quality; `nil` keeps the scan as is.
+    var settings: (maxDimension: CGFloat, compression: CGFloat)? {
+        switch self {
+        case .small: (1240, 0.5)
+        case .medium: (2000, 0.7)
+        case .high: nil
+        }
+    }
+
+    /// Re-encodes the page image for this quality.
+    func prepare(_ image: UIImage) -> UIImage {
+        guard let settings,
+              let data = image.upright(maxDimension: settings.maxDimension).jpegData(compressionQuality: settings.compression),
+              let compressed = UIImage(data: data) else { return image }
+        return compressed
+    }
+}
+
 nonisolated struct PDFPageContent: Sendable {
     let image: UIImage
     let lines: [TextLine]
@@ -47,7 +81,7 @@ nonisolated enum PDFService {
     }
 
     /// Each page is the scan with an invisible text layer on top, so the PDF can be searched and copied from.
-    static func generatePDF(from pages: [PDFPageContent], pageSize: PDFPageSize) -> Data {
+    static func generatePDF(from pages: [PDFPageContent], pageSize: PDFPageSize, quality: PDFQuality = .high) -> Data {
         let renderer = UIGraphicsPDFRenderer(bounds: pageRect(for: CGSize(width: 1, height: 1), pageSize: .a4))
 
         return renderer.pdfData { context in
@@ -55,7 +89,7 @@ nonisolated enum PDFService {
                 let page = pageRect(for: content.image.size, pageSize: pageSize)
                 context.beginPage(withBounds: page, pageInfo: [:])
                 let imageRect = drawRect(for: content.image.size, in: page)
-                content.image.draw(in: imageRect)
+                quality.prepare(content.image).draw(in: imageRect)
                 drawTextLayer(content.lines, in: imageRect, context: context.cgContext)
             }
         }

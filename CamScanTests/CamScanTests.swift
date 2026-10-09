@@ -200,3 +200,25 @@ struct ExportTests {
         #expect(pages.allSatisfy { $0.originalImageData == nil })
     }
 }
+
+struct QualityTests {
+
+    @Test func smallerQualityMakesSmallerPDF() {
+        // Noise doesn't compress, so the size difference comes from downscaling and JPEG quality.
+        let size = CGSize(width: 2400, height: 3200)
+        let format = UIGraphicsImageRendererFormat()
+        format.scale = 1
+        let image = UIGraphicsImageRenderer(size: size, format: format).image { context in
+            for y in stride(from: 0, to: Int(size.height), by: 16) {
+                for x in stride(from: 0, to: Int(size.width), by: 16) {
+                    UIColor(white: CGFloat((x * 7 + y * 13) % 255) / 255, alpha: 1).setFill()
+                    context.fill(CGRect(x: x, y: y, width: 16, height: 16))
+                }
+            }
+        }
+        let page = [PDFPageContent(image: image, lines: [])]
+        let small = PDFService.generatePDF(from: page, pageSize: .a4, quality: .small)
+        let high = PDFService.generatePDF(from: page, pageSize: .a4, quality: .high)
+        #expect(small.count < high.count)
+    }
+}
